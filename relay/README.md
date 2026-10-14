@@ -7,8 +7,8 @@ Container image and Fly.io config for the relay process.
 ```sh
 brew install flyctl && fly auth login
 cd relay
-fly launch --no-deploy --copy-config --name relaynet   # creates the app, keeps fly.toml
-fly volumes create relay_data --size 1 --region sjc
+fly apps create relaynet --org <org>
+fly volumes create relay_data --size 1 --region sjc -a relaynet --yes
 
 fly secrets set \
   ADMIN_SESSION_SECRET="$(openssl rand -hex 32)" \
@@ -16,9 +16,12 @@ fly secrets set \
   ADMIN_BOOTSTRAP_USERNAME=admin \
   ADMIN_BOOTSTRAP_PASSWORD="$(openssl rand -base64 18 | tr -d '/+=')"
 
-fly deploy
+fly deploy --ha=false     # one machine; sessions and the IP pool are in memory
 curl -s https://relaynet.fly.dev/healthz
 ```
+
+Always pass `--ha=false`; without it Fly starts two machines and clients get
+split across two relays that do not share state.
 
 Note the bootstrap password somewhere safe; it is used once to create the
 first operator and can be unset afterwards with `fly secrets unset`.
@@ -50,7 +53,7 @@ Change the tarball tag in `package.json`, then:
 ```sh
 npm install          # refreshes package-lock.json
 docker build .       # optional local check
-fly deploy
+fly deploy --ha=false
 ```
 
 ## Running locally
