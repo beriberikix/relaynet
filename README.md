@@ -1,6 +1,7 @@
 # relaynet
 
-Hosted, multi-user network relay for browser VMs. The relay process is
+Hosted, multi-user network relay for browser VMs at https://relaynet.network
+(relay endpoint `wss://relay.relaynet.network`). The relay process is
 [rootlessRelay](https://github.com/beriberikix/rootlessRelay) in hosted mode,
 pinned as a dependency; this repo holds everything around it.
 

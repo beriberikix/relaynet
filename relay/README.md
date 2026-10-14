@@ -17,7 +17,7 @@ fly secrets set \
   ADMIN_BOOTSTRAP_PASSWORD="$(openssl rand -base64 18 | tr -d '/+=')"
 
 fly deploy --ha=false     # one machine; sessions and the IP pool are in memory
-curl -s https://relaynet.fly.dev/healthz
+curl -s https://relay.relaynet.network/healthz
 ```
 
 Always pass `--ha=false`; without it Fly starts two machines and clients get

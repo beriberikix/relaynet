@@ -7,14 +7,15 @@ primary_region = "sjc"
   dockerfile = "Dockerfile"
 
 [env]
-  # Fly's proxy puts the real client address in Fly-Client-IP. When Cloudflare
-  # is in front, switch this to "cf-connecting-ip".
+  # Cloudflare fronts relay.relaynet.network and puts the real client address
+  # in CF-Connecting-IP. Clients hitting relaynet.fly.dev directly carry no such
+  # header and fall back to Fly's proxy address, so always use the public host.
   TRUST_PROXY = "true"
-  CLIENT_IP_HEADER = "fly-client-ip"
+  CLIENT_IP_HEADER = "cf-connecting-ip"
   TRUST_PROXY_HOPS = "1"
 
   # Browser origins allowed to open sessions and request anonymous tokens.
-  ALLOWED_ORIGINS = "https://relaynet.pages.dev"
+  ALLOWED_ORIGINS = "https://relaynet.network"
 
   # Anonymous demo tier on; tighten or disable via TIERS_JSON / ANON_ENABLED.
   ANON_ENABLED = "true"
