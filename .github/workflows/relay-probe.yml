@@ -1,0 +1,35 @@
+name: relay probe
+
+# Hourly end-to-end check of the hosted relay (auth, DHCP, DNS egress) with
+# the dedicated "probe" account. Success pings the Better Stack heartbeat;
+# failure reports to it immediately, and a missed run alerts after the grace
+# period.
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: infra/probe
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Probe relay.relaynet.network
+        env:
+          RELAY_TOKEN: ${{ secrets.PROBE_RELAY_TOKEN }}
+        run: node infra/probe/probe.mjs
+      - name: Heartbeat
+        if: success()
+        run: curl -fsS -m 10 --retry 3 "${{ secrets.BETTERSTACK_PROBE_HEARTBEAT_URL }}" > /dev/null
+      - name: Report failure
+        if: failure()
+        run: curl -fsS -m 10 --retry 3 "${{ secrets.BETTERSTACK_PROBE_HEARTBEAT_URL }}/fail" > /dev/null
