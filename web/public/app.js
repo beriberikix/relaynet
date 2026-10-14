@@ -289,6 +289,7 @@
     $("#dashboard").hidden = !authed;
     $("#btn-login").hidden = authed;
     $("#btn-logout").hidden = !authed;
+    for (const link of document.querySelectorAll(".topnav a[data-landing]")) link.hidden = authed;
     const chip = $("#user-chip");
     chip.hidden = !authed;
     chip.textContent = authed && profile ? (profile.email || profile.name || "") : "";
@@ -307,12 +308,15 @@
         await logout();
         break;
       case "refresh-sessions":
-        await refreshSessions();
+        await loadDashboard();
         break;
       case "kill-session":
         target.disabled = true;
         await api(`/api/me/sessions/${encodeURIComponent(target.dataset.id)}`, { method: "DELETE" });
-        await refreshSessions();
+        // The close handshake finishes a moment after the request returns.
+        target.closest("tr").remove();
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await loadDashboard();
         break;
       case "revoke-token":
         if (!window.confirm("Revoke this token? Clients using it will be disconnected on their next connection.")) return;

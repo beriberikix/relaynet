@@ -15,8 +15,8 @@
       relaynet
     </a>
     <nav class="topnav">
-      <a href="#how">How it works</a>
-      <a href="#tiers">Tiers</a>
+      <a href="#how" data-landing>How it works</a>
+      <a href="#tiers" data-landing>Tiers</a>
       <a href="https://github.com/beriberikix/rootlessRelay#hosted-mode" rel="noopener">Docs</a>
       <span id="user-chip" class="user-chip" hidden></span>
       <button id="btn-login" class="btn btn-primary" type="button">Sign in</button>
@@ -112,7 +112,7 @@
       <div class="card">
         <div class="card-head">
           <h3>Active sessions</h3>
-          <button class="btn btn-sm" type="button" data-action="refresh-sessions">Refresh</button>
+          <button class="btn btn-sm" type="button" data-action="refresh-sessions">Refresh all</button>
         </div>
         <p id="sessions-empty" class="muted">No sessions right now. Open one from your VM page and it will appear here.</p>
         <table class="table" id="sessions-table" hidden>
