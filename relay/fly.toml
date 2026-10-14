@@ -3,6 +3,10 @@
 app = "relaynet"
 primary_region = "sjc"
 
+# Litestream forwards the stop signal to the relay, waits for it, then does a
+# final sync to R2; give that room before Fly force-kills the machine.
+kill_timeout = 15
+
 [build]
   dockerfile = "Dockerfile"
 
@@ -37,6 +41,9 @@ primary_region = "sjc"
   METRICS_ENABLED = "true"
   METRICS_PUBLIC = "true"
 
+  # Litestream replica prefix in the relaynet-backups R2 bucket.
+  LITESTREAM_REPLICA_PATH = "prod"
+
 [http_service]
   internal_port = 8086
   force_https = true
@@ -63,8 +70,13 @@ primary_region = "sjc"
   destination = "/data"
   initial_size = "1gb"
 
-[metrics]
+[[metrics]]
   port = 8001
+  path = "/metrics"
+
+[[metrics]]
+  # Litestream replication metrics.
+  port = 9090
   path = "/metrics"
 
 [[vm]]

@@ -35,6 +35,16 @@ Optional secrets, set the same way:
 
 Non-secret settings live in `fly.toml` under `[env]`.
 
+## Backups
+
+Litestream runs as the entrypoint and streams `/data/relay.sqlite` to the R2
+bucket `relaynet-backups` (`litestream.yml`, prefix from
+`LITESTREAM_REPLICA_PATH`). On boot with an empty volume it restores first
+and refuses to start if the restore fails. Credentials are the Fly secrets
+`LITESTREAM_ACCESS_KEY_ID` and `LITESTREAM_SECRET_ACCESS_KEY`. Set
+`LITESTREAM_ENABLED=false` to run the relay without it (local experiments).
+Restore procedures: `../infra/RUNBOOKS.md`.
+
 ## Operator panel
 
 ```sh

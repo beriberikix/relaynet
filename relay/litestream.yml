@@ -1,0 +1,23 @@
+# Litestream streams the relay's SQLite database to Cloudflare R2.
+# Credentials come from Fly secrets (LITESTREAM_ACCESS_KEY_ID /
+# LITESTREAM_SECRET_ACCESS_KEY, a token scoped to this one bucket).
+# ${VAR} references are expanded from the environment at startup.
+
+# Prometheus metrics (replication position, errors) for Fly's scraper.
+addr: ":9090"
+
+# Full snapshot daily; keep 7 days of snapshots and changes, so any point in
+# the last week can be restored. Matches the privacy policy.
+snapshot:
+  interval: 24h
+  retention: 168h
+
+dbs:
+  - path: ${ADMIN_AUTH_DB_PATH}
+    replica:
+      type: s3
+      bucket: relaynet-backups
+      path: ${LITESTREAM_REPLICA_PATH}
+      endpoint: https://d156933bd2b70b1dc965c34c2573a796.r2.cloudflarestorage.com
+      region: auto
+      sync-interval: 1s

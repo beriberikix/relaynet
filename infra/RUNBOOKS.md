@@ -40,7 +40,7 @@ Audit rows are kept 30 days; ban decisions do not expire.
 
 1. Tag a fork release (`vX.Y.Z-hosted.N`) after CI is green.
 2. In `relay/package.json` point the tarball at the tag, run `npm install`.
-3. If the release has a database migration, back up first (see below).
+3. If the release has a database migration, take a manual copy first (see Backups).
 4. `fly deploy --ha=false` from `relay/`. Every deploy closes live sessions;
    prefer quiet hours. Clients reconnect on their own.
 5. Check `curl -s https://relay.relaynet.network/healthz` and `fly logs`.
@@ -53,22 +53,51 @@ back by an older image; restore the pre-deploy backup instead.
 
 `cf deploy` from `web/`. Static files only; instant and safe to repeat.
 
-## Back up the database by hand
+## Backups
 
-Until Litestream is running, take a consistent copy before risky changes:
+The database streams continuously to the R2 bucket `relaynet-backups`
+(prefix `prod/`) through Litestream, which runs as the container's
+entrypoint (`relay/entrypoint.sh`, `relay/litestream.yml`). Retention is 7
+days with a daily snapshot. Fly also snapshots the volume daily (14 days).
 
-```sh
-fly ssh console -a relaynet -C "node -e \"const s=require('/app/node_modules/sqlite3');const d=new s.Database('/data/relay.sqlite');d.run(\\\"VACUUM INTO '/data/backup-$(date +%Y%m%d).sqlite'\\\",e=>{console.log(e||'ok');d.close()})\""
-fly ssh sftp get /data/backup-$(date +%Y%m%d).sqlite ./backup.sqlite -a relaynet
-sqlite3 ./backup.sqlite "PRAGMA integrity_check; SELECT COUNT(*) FROM users;"
-```
-
-Delete old copies from `/data` afterwards; the volume is 1 GB.
+- Credentials: `LITESTREAM_ACCESS_KEY_ID/SECRET` on Fly (read-write, this
+  bucket only); `R2_RO_*` in `relay/.env.local` and in the repo's Actions
+  secrets (read-only), both Cloudflare user tokens named `relaynet-*`.
+- The **backup restore check** workflow restores weekly and opens an issue
+  if it fails. Run it on demand from the Actions tab.
+- Litestream metrics are scraped from port 9090 (`litestream_*` in Grafana).
 
 ## Restore the database
 
-[[To be written with the Litestream setup: restore from R2 onto a fresh
-volume, verify, swap.]]
+**Volume lost or machine replaced** (most likely case): nothing to do. On
+boot, `entrypoint.sh` sees no database and restores the latest state from R2
+before starting the relay. If the restore fails the machine refuses to start
+(so it cannot overwrite the backups with an empty database); check
+`fly logs`.
+
+**Roll back to an earlier point** (bad migration, bad bulk change):
+
+```sh
+cd relay && set -a && . ./.env.local && set +a
+export LITESTREAM_ACCESS_KEY_ID=$R2_RO_ACCESS_KEY_ID LITESTREAM_SECRET_ACCESS_KEY=$R2_RO_SECRET_ACCESS_KEY
+export LITESTREAM_REPLICA_PATH=prod ADMIN_AUTH_DB_PATH=/data/relay.sqlite
+litestream restore -config litestream.yml -timestamp 2026-10-14T20:00:00Z \
+  -integrity-check full -o ./restored.sqlite /data/relay.sqlite
+sqlite3 ./restored.sqlite "SELECT COUNT(*) FROM users;"      # inspect it
+```
+
+Then put it in place: `fly ssh sftp shell -a relaynet`, upload it as
+`/data/relay.restored.sqlite`; then in `fly ssh console` run
+`mv /data/relay.restored.sqlite /data/relay.sqlite && rm -rf /data/.relay.sqlite-litestream /data/relay.sqlite-wal /data/relay.sqlite-shm`;
+then immediately `fly machine restart` (writes between the two are lost). Litestream starts a new generation from the
+restored file. Expect a few minutes of downtime; announce it.
+
+**Manual copy before a risky change** (in addition to Litestream):
+
+```sh
+fly ssh console -a relaynet -C "node -e \"const s=require('/app/node_modules/sqlite3');const d=new s.Database('/data/relay.sqlite');d.run(\\\"VACUUM INTO '/data/backup.sqlite'\\\",e=>{console.log(e||'ok');d.close()})\""
+fly ssh sftp get /data/backup.sqlite ./backup.sqlite -a relaynet
+```
 
 ## Rotate a secret
 

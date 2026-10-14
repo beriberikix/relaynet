@@ -1,0 +1,55 @@
+name: backup restore check
+
+# Weekly proof that the Litestream backup in R2 restores: download the
+# replica with a read-only key, run a full integrity check and a sanity
+# query. A failure opens an issue (and GitHub emails the repo owner).
+on:
+  schedule:
+    - cron: "17 14 * * 1"   # Mondays 14:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  LITESTREAM_VERSION: "0.5.17"
+  LITESTREAM_SHA256: cfb371176d164437ae869f8351cfde49bd1804ae71c61923f75c9cba9c9c006d
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Litestream
+        run: |
+          curl -fsSL -o /tmp/litestream.tar.gz \
+            "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-${LITESTREAM_VERSION}-linux-x86_64.tar.gz"
+          echo "${LITESTREAM_SHA256}  /tmp/litestream.tar.gz" | sha256sum -c -
+          sudo tar -xzf /tmp/litestream.tar.gz -C /usr/local/bin litestream
+      - name: Restore from R2
+        env:
+          LITESTREAM_ACCESS_KEY_ID: ${{ secrets.R2_RO_ACCESS_KEY_ID }}
+          LITESTREAM_SECRET_ACCESS_KEY: ${{ secrets.R2_RO_SECRET_ACCESS_KEY }}
+          LITESTREAM_REPLICA_PATH: prod
+          ADMIN_AUTH_DB_PATH: /data/relay.sqlite
+        run: |
+          litestream restore -config relay/litestream.yml -integrity-check full \
+            -o "$RUNNER_TEMP/restored.sqlite" /data/relay.sqlite
+      - name: Sanity check
+        run: |
+          db="$RUNNER_TEMP/restored.sqlite"
+          test "$(sqlite3 "$db" 'PRAGMA integrity_check;')" = ok
+          version=$(sqlite3 "$db" 'SELECT version FROM schema_version;')
+          operators=$(sqlite3 "$db" "SELECT COUNT(*) FROM users WHERE role = 'operator';")
+          users=$(sqlite3 "$db" 'SELECT COUNT(*) FROM users;')
+          echo "schema v$version, $users users, $operators operators" | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$operators" -ge 1
+      - name: Open an issue on failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --title "Backup restore check failed ($(date -u +%F))" \
+            --body "The weekly Litestream restore from R2 failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. See infra/RUNBOOKS.md."
