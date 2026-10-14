@@ -187,12 +187,21 @@ ul.plain li:last-child { border-bottom: 0; }
 .badge.off { color: var(--muted); }
 .badge.warn { color: var(--danger); border-color: currentColor; }
 
+/* Overlay, so showing or clearing a message never shifts the page under the
+   pointer (a button that moves between two clicks is a misclick). */
 .status {
-  margin: 0 0 16px;
+  position: fixed;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: min(640px, calc(100% - 32px));
   padding: 10px 14px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
 }
 .status.error { border-color: var(--danger); color: var(--danger); }
 

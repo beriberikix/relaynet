@@ -20,6 +20,10 @@ primary_region = "sjc"
   # No anonymous tier: every session needs an account (invite-only beta).
   ANON_ENABLED = "false"
 
+  # New Auth0 sign-ups start pending until they redeem an invite code
+  # (created in the operator panel under Invites).
+  SIGNUP_MODE = "invite"
+
   # The admin port is not in [http_service], so it is never public. Reach it
   # with `fly proxy 8001:8001`, which lands on plain HTTP at localhost.
   # Fly's private network is IPv6-only, so the admin server must bind "::"

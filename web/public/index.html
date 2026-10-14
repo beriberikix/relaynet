@@ -85,6 +85,18 @@
 
     <!-- Dashboard -->
     <section id="dashboard" hidden>
+      <div class="card" id="card-invite" hidden>
+        <h3>Redeem your invite</h3>
+        <p>relaynet is in an invite-only beta. Enter the code you were sent to activate your account.</p>
+        <form id="invite-form" class="inline-form">
+          <label>Invite code <input name="code" type="text" maxlength="32" placeholder="RLY-XXXX-XXXX-XXXX"
+            autocomplete="off" spellcheck="false" required></label>
+          <button class="btn btn-primary" type="submit">Activate</button>
+        </form>
+        <p class="muted">No code? Ask the person who told you about relaynet, or write to
+          <a href="mailto:support@relaynet.network">support@relaynet.network</a>.</p>
+      </div>
+
       <div class="grid two">
         <div class="card" id="card-account">
           <h3>Account</h3>
@@ -101,6 +113,7 @@
         </div>
       </div>
 
+      <div id="active-only">
       <div class="card">
         <div class="card-head">
           <h3>Active sessions</h3>
@@ -135,6 +148,17 @@
           <thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+      </div>
+
+      <div class="card" id="card-delete">
+        <h3>Delete account</h3>
+        <p class="muted">Deletes your account, API tokens and usage history and closes your sessions.
+          This cannot be undone. Type <strong id="delete-username"></strong> to confirm.</p>
+        <form id="delete-form" class="inline-form">
+          <label>Confirm <input name="confirm" type="text" autocomplete="off" spellcheck="false" required></label>
+          <button class="btn btn-danger" type="submit">Delete my account</button>
+        </form>
       </div>
     </section>
   </main>

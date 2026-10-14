@@ -69,7 +69,10 @@
     box.textContent = message;
     box.className = `status${isError ? " error" : ""}`;
     box.hidden = !message;
+    clearTimeout(showStatus.timer);
+    if (message && !isError) showStatus.timer = setTimeout(() => showStatus(""), 6000);
   }
+  $("#status").addEventListener("click", () => showStatus(""));
 
   // --- Auth0 ---------------------------------------------------------------
   let auth0Client = null;
@@ -262,14 +265,25 @@
   }
 
   // --- Data loading --------------------------------------------------------
+  let username = null;
+
   async function loadDashboard() {
-    const [me, usage, sessions, tokens] = await Promise.all([
-      api("/api/me"),
+    const me = await api("/api/me");
+    username = me.user.username;
+    $("#delete-username").textContent = username;
+    const pending = me.user.status === "pending";
+    $("#card-invite").hidden = !pending;
+    $("#active-only").hidden = pending;
+    renderAccount(me);
+    if (pending) {
+      renderUsage({ current: me.usage, months: [] });
+      return;
+    }
+    const [usage, sessions, tokens] = await Promise.all([
       api("/api/me/usage"),
       api("/api/me/sessions"),
       api("/api/me/tokens"),
     ]);
-    renderAccount(me);
     renderUsage(usage);
     renderSessions(sessions);
     renderTokens(tokens);
@@ -295,8 +309,13 @@
           profile = null;
           showView(false);
           showStatus("Your session expired. Sign in again to see your dashboard.", false);
+        } else if (error && error.status === 429) {
+          showStatus("Too many attempts. Wait a while and try again.", true);
         } else if (error && error.status === 403 && /suspended/.test(error.message)) {
           showStatus("This account is suspended. Contact the operator.", true);
+        } else if (error && error.status >= 400 && error.status < 500 && error.message) {
+          // The relay's 4xx messages are written for people.
+          showStatus(error.message, true);
         } else {
           showStatus(`Something went wrong: ${error.message || error}`, true);
         }
@@ -340,7 +359,18 @@
         await loadDashboard();
         break;
       case "revoke-token":
-        if (!window.confirm("Revoke this token? Clients using it will be disconnected on their next connection.")) return;
+        // Two clicks: the first arms the button for a few seconds.
+        if (target.dataset.armed !== "1") {
+          target.dataset.armed = "1";
+          target.textContent = "Confirm revoke";
+          setTimeout(() => {
+            if (target.isConnected && !target.disabled) {
+              target.dataset.armed = "";
+              target.textContent = "Revoke";
+            }
+          }, 4000);
+          return;
+        }
         target.disabled = true;
         await api(`/api/me/tokens/${encodeURIComponent(target.dataset.id)}`, { method: "DELETE" });
         await refreshTokens();
@@ -379,6 +409,33 @@
     } finally {
       button.disabled = false;
     }
+  }));
+
+  $("#invite-form").addEventListener("submit", withErrors(async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const button = form.querySelector("button[type=submit]");
+    button.disabled = true;
+    try {
+      await api("/api/me/redeem", { method: "POST", body: { code: form.elements.code.value.trim() } });
+      form.reset();
+      showStatus("Your account is active. Create a token to connect a VM.", false);
+      await loadDashboard();
+    } finally {
+      button.disabled = false;
+    }
+  }));
+
+  $("#delete-form").addEventListener("submit", withErrors(async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const confirm = form.elements.confirm.value.trim();
+    if (confirm !== username) {
+      showStatus("Type your account name exactly to confirm.", true);
+      return;
+    }
+    await api("/api/me", { method: "DELETE", body: { confirm } });
+    await logout();
   }));
 
   withErrors(async () => {
