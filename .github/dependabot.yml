@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # The relay pins the fork by release tarball; Dependabot cannot bump that,
+  # so this covers only the container base image and the web tooling.
+  - package-ecosystem: docker
+    directory: /relay
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    groups:
+      tooling:
+        patterns: ["*"]
