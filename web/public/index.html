@@ -36,8 +36,9 @@
           VM's network adapter at a WebSocket and it gets DNS, TCP and UDP to the public internet,
           with per-account limits and nothing reachable inside the relay's own network.
         </p>
+        <p class="muted">relaynet is in an invite-only beta. Sign in, then redeem your invite code.</p>
         <div class="hero-actions">
-          <button class="btn btn-primary btn-lg" type="button" data-action="login">Sign in or create an account</button>
+          <button class="btn btn-primary btn-lg" type="button" data-action="login">Sign in</button>
           <a class="btn btn-lg" href="#how">See how it works</a>
         </div>
       </div>
@@ -45,8 +46,7 @@
       <div id="how" class="grid three">
         <div class="card">
           <h3>1. Get a token</h3>
-          <p>Sign in and create an API token from your dashboard, or let your page request a short-lived
-            demo token with no account.</p>
+          <p>Sign in with your invite and create an API token from your dashboard.</p>
         </div>
         <div class="card">
           <h3>2. Open the WebSocket</h3>
@@ -71,17 +71,9 @@
           entry. Non-browser clients may send <code>Authorization: Bearer</code> instead.</p>
       </div>
 
-      <div id="tiers" class="grid two">
+      <div id="tiers" class="grid">
         <div class="card">
-          <h3>Demo, no account</h3>
-          <ul class="plain">
-            <li>Short-lived token, one session at a time</li>
-            <li>Ports 80 and 443 only, 256 KiB/s up and 512 KiB/s down</li>
-            <li>15 minute sessions, 200 MB per day per address</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h3>Account</h3>
+          <h3>Beta account</h3>
           <ul class="plain">
             <li>Long-lived API tokens, up to 4 concurrent sessions</li>
             <li>Any port except mail, 1 MiB/s each direction</li>

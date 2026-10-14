@@ -17,8 +17,8 @@ primary_region = "sjc"
   # Browser origins allowed to open sessions and request anonymous tokens.
   ALLOWED_ORIGINS = "https://relaynet.network,https://beriberikix.github.io"
 
-  # Anonymous demo tier on; tighten or disable via TIERS_JSON / ANON_ENABLED.
-  ANON_ENABLED = "true"
+  # No anonymous tier: every session needs an account (invite-only beta).
+  ANON_ENABLED = "false"
 
   # The admin port is not in [http_service], so it is never public. Reach it
   # with `fly proxy 8001:8001`, which lands on plain HTTP at localhost.

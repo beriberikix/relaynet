@@ -31,8 +31,7 @@ Optional secrets, set the same way:
 | Secret | Purpose |
 |---|---|
 | `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_JWKS_URL`, `JWT_USERNAME_CLAIM` | External logins (see `../infra/README.md`). |
-| `TURNSTILE_SECRET` | Require a Cloudflare Turnstile check for anonymous tokens. |
-| `TIERS_JSON` | Override tier limits, e.g. `{"anon":{"maxSessionMs":600000}}`. |
+| `TIERS_JSON` | Override tier limits, e.g. `{"user":{"maxSessionMs":3600000}}`. |
 
 Non-secret settings live in `fly.toml` under `[env]`.
 

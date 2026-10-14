@@ -31,7 +31,7 @@ and passes the **access token** (not the ID token) to the relay.
 Users signing in through Auth0 are created in the relay on first connection
 with the `user` tier. Operators can change tiers or ban them from the panel.
 
-## Cloudflare (DNS, edge protection, Turnstile)
+## Cloudflare (DNS, edge protection)
 
 Done on 2026-10-14 with the Cloudflare CLI (`cf`). Zone `relaynet.network`:
 
@@ -40,8 +40,6 @@ Done on 2026-10-14 with the Cloudflare CLI (`cf`). Zone `relaynet.network`:
 | Relay host | `relay.relaynet.network`, proxied CNAME to the Fly app |
 | Fly validation | DNS-only CNAME `_acme-challenge.relay` and TXT `_fly-ownership.relay`, from `fly certs setup` |
 | SSL mode | Full (strict); Fly holds a Let's Encrypt cert for the host |
-| Rate limit | `http_ratelimit` rule: more than 5 requests per 10 s per IP to `/api/anon/token` on the relay host are blocked for 10 s |
-| Turnstile | widget `relaynet`, managed mode, domain `relaynet.network`; secret set on Fly as `TURNSTILE_SECRET` |
 
 The relay reads the client address from `CF-Connecting-IP`
 (`CLIENT_IP_HEADER` in `relay/fly.toml`). Clients that bypass Cloudflare by
@@ -49,8 +47,9 @@ connecting to `relaynet.fly.dev` directly all appear as one address and share
 the per-address limits, which is acceptable; the public URL is the Cloudflare
 one.
 
-Frontend: `relaynet.network` (apex) on Cloudflare Pages, not set up yet. The
-page must send `turnstileToken` in the anonymous token request body.
+The anonymous demo tier was removed on 2026-10-14 for the invite-only beta
+(`ANON_ENABLED=false`; the Turnstile widget, its secret, the anon token secret
+and the `/api/anon/token` rate-limit rule were deleted).
 
 ## Operator access
 
