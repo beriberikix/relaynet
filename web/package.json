@@ -1,0 +1,15 @@
+{
+  "name": "relaynet-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "relaynet landing page and account dashboard (static)",
+  "scripts": {
+    "dev": "python3 -m http.server 5173 -d public",
+    "deploy": "cf deploy"
+  },
+  "devDependencies": {
+    "cf": "^1.0.0-beta.17",
+    "wrangler": "^4.151.0"
+  },
+  "type": "module"
+}

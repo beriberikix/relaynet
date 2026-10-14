@@ -1,0 +1,10 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://relay.relaynet.network https://jonathanberi.us.auth0.com; img-src 'self' data: https:; frame-src https://jonathanberi.us.auth0.com; form-action 'self' https://jonathanberi.us.auth0.com; base-uri 'self'; frame-ancestors 'none'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Cache-Control: no-cache
+
+/config.js
+  Cache-Control: no-cache
