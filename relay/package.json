@@ -1,0 +1,15 @@
+{
+  "name": "relaynet-relay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Container wrapper around rootlessRelay in hosted mode",
+  "scripts": {
+    "start": "node node_modules/rootlessrelay/relay.js"
+  },
+  "dependencies": {
+    "rootlessrelay": "https://github.com/beriberikix/rootlessRelay/archive/refs/tags/v0.6.0-hosted.1.tar.gz"
+  },
+  "allowScripts": {
+    "sqlite3@5.1.7": true
+  }
+}

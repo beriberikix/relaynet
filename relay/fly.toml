@@ -1,0 +1,63 @@
+# Fly.io config for the relay. Deploy with `fly deploy` from this directory.
+# Secrets are set once with `fly secrets set` (see README.md).
+app = "relaynet"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Fly's proxy puts the real client address in Fly-Client-IP. When Cloudflare
+  # is in front, switch this to "cf-connecting-ip".
+  TRUST_PROXY = "true"
+  CLIENT_IP_HEADER = "fly-client-ip"
+  TRUST_PROXY_HOPS = "1"
+
+  # Browser origins allowed to open sessions and request anonymous tokens.
+  ALLOWED_ORIGINS = "https://relaynet.pages.dev"
+
+  # Anonymous demo tier on; tighten or disable via TIERS_JSON / ANON_ENABLED.
+  ANON_ENABLED = "true"
+
+  # The admin port is not in [http_service], so it is never public. Reach it
+  # with `fly proxy 8001:8001`, which lands on plain HTTP at localhost.
+  ADMIN_COOKIE_SECURE = "false"
+  ADMIN_TRUST_PROXY = "false"
+
+  # Fly's metrics scraper reads /metrics over the private network without auth.
+  METRICS_ENABLED = "true"
+  METRICS_PUBLIC = "true"
+
+[http_service]
+  internal_port = 8086
+  force_https = true
+  # One always-on machine: sessions and the IP pool live in memory.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    # The 10.0.2.0/24 pool holds 240 sessions; leave headroom for health checks.
+    type = "connections"
+    soft_limit = 200
+    hard_limit = 260
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+
+[[mounts]]
+  source = "relay_data"
+  destination = "/data"
+  initial_size = "1gb"
+
+[metrics]
+  port = 8001
+  path = "/metrics"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
