@@ -81,6 +81,9 @@
       clientId: cfg.auth0.clientId,
       cacheLocation: "localstorage",
       useRefreshTokens: true,
+      // Sessions cached before refresh tokens were enabled have none; fall
+      // back to a silent iframe exchange instead of failing.
+      useRefreshTokensFallback: true,
       authorizationParams: {
         redirect_uri: window.location.origin,
         audience: cfg.auth0.audience,
@@ -113,8 +116,20 @@
     return auth0Client.logout({ logoutParams: { returnTo: window.location.origin } });
   }
 
+  // Errors that mean "the stored session can no longer mint tokens".
+  const SESSION_EXPIRED = new Set(["login_required", "missing_refresh_token", "invalid_grant", "consent_required", "interaction_required"]);
+
   async function accessToken() {
-    return auth0Client.getTokenSilently({ authorizationParams: { audience: cfg.auth0.audience } });
+    try {
+      return await auth0Client.getTokenSilently({ authorizationParams: { audience: cfg.auth0.audience } });
+    } catch (error) {
+      if (error && (SESSION_EXPIRED.has(error.error) || /Missing Refresh Token/i.test(error.message || ""))) {
+        const expired = new Error("session-expired");
+        expired.sessionExpired = true;
+        throw expired;
+      }
+      throw error;
+    }
   }
 
   // --- Relay API -----------------------------------------------------------
@@ -274,7 +289,13 @@
         showStatus("");
         await fn(...args);
       } catch (error) {
-        if (error && error.status === 403 && /suspended/.test(error.message)) {
+        if (error && error.sessionExpired) {
+          // Drop the stale local session and offer a fresh sign-in.
+          await auth0Client.logout({ openUrl: false });
+          profile = null;
+          showView(false);
+          showStatus("Your session expired. Sign in again to see your dashboard.", false);
+        } else if (error && error.status === 403 && /suspended/.test(error.message)) {
           showStatus("This account is suspended. Contact the operator.", true);
         } else {
           showStatus(`Something went wrong: ${error.message || error}`, true);
