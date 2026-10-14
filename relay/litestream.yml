@@ -16,7 +16,7 @@ dbs:
   - path: ${ADMIN_AUTH_DB_PATH}
     replica:
       type: s3
-      bucket: relaynet-backups
+      bucket: ${LITESTREAM_BUCKET}
       path: ${LITESTREAM_REPLICA_PATH}
       endpoint: https://d156933bd2b70b1dc965c34c2573a796.r2.cloudflarestorage.com
       region: auto

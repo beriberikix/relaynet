@@ -1,0 +1,71 @@
+name: deploy relay
+
+# Pushes to main that touch relay/ deploy to staging and probe it.
+# Production deploys only from a manual run with "production" checked, and
+# only after the same staging deploy and probe pass.
+on:
+  push:
+    branches: [main]
+    paths: ["relay/**", "infra/probe/**", ".github/workflows/deploy-relay.yml"]
+  workflow_dispatch:
+    inputs:
+      production:
+        description: "Also deploy to production after staging passes"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-relay
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@1.6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Deploy to relaynet-staging
+        working-directory: relay
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_DEPLOY_TOKEN_STAGING }}
+        run: flyctl deploy -c fly.staging.toml --ha=false --remote-only
+      - name: Probe staging
+        env:
+          RELAY_URL: wss://relay-staging.relaynet.network/
+          RELAY_TOKEN: ${{ secrets.STAGING_PROBE_RELAY_TOKEN }}
+        run: |
+          # The staging machine may still be starting; retry briefly.
+          for i in 1 2 3 4 5; do node infra/probe/probe.mjs && exit 0; sleep 10; done
+          exit 1
+
+  production:
+    needs: staging
+    if: github.event_name == 'workflow_dispatch' && inputs.production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@1.6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Deploy to relaynet
+        working-directory: relay
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_DEPLOY_TOKEN_PRODUCTION }}
+        run: flyctl deploy --ha=false --remote-only
+      - name: Probe production
+        env:
+          RELAY_TOKEN: ${{ secrets.PROBE_RELAY_TOKEN }}
+        run: |
+          for i in 1 2 3 4 5; do node infra/probe/probe.mjs && exit 0; sleep 10; done
+          exit 1

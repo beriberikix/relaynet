@@ -47,7 +47,8 @@ kill_timeout = 15
   METRICS_ENABLED = "true"
   METRICS_PUBLIC = "true"
 
-  # Litestream replica prefix in the relaynet-backups R2 bucket.
+  # Litestream target: R2 bucket and prefix.
+  LITESTREAM_BUCKET = "relaynet-backups"
   LITESTREAM_REPLICA_PATH = "prod"
 
 [http_service]
