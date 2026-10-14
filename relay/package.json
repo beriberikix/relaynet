@@ -7,7 +7,7 @@
     "start": "node node_modules/rootlessrelay/relay.js"
   },
   "dependencies": {
-    "rootlessrelay": "https://github.com/beriberikix/rootlessRelay/archive/refs/tags/v0.6.0-hosted.5.tar.gz"
+    "rootlessrelay": "https://github.com/beriberikix/rootlessRelay/archive/refs/tags/v0.6.0-hosted.6.tar.gz"
   },
   "allowScripts": {
     "sqlite3@5.1.7": true

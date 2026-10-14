@@ -134,11 +134,11 @@
           <label>Name <input name="name" type="text" maxlength="64" placeholder="laptop" required></label>
           <label>Expires
             <select name="expiresInDays">
-              <option value="">never</option>
               <option value="7">in 7 days</option>
               <option value="30">in 30 days</option>
-              <option value="90">in 90 days</option>
+              <option value="90" selected>in 90 days</option>
               <option value="365">in a year</option>
+              <option value="">never</option>
             </select>
           </label>
           <button class="btn btn-primary" type="submit">Create token</button>
