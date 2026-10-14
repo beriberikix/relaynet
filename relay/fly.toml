@@ -15,7 +15,7 @@ primary_region = "sjc"
   TRUST_PROXY_HOPS = "1"
 
   # Browser origins allowed to open sessions and request anonymous tokens.
-  ALLOWED_ORIGINS = "https://relaynet.network"
+  ALLOWED_ORIGINS = "https://relaynet.network,https://beriberikix.github.io"
 
   # Anonymous demo tier on; tighten or disable via TIERS_JSON / ANON_ENABLED.
   ANON_ENABLED = "true"
