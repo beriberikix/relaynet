@@ -1,0 +1,12 @@
+# Ships the relay's logs (Fly's NATS log stream) to Grafana Cloud Loki.
+# Secrets: ORG, ACCESS_TOKEN (read-only org token), SUBJECT, LOKI_URL,
+# LOKI_USERNAME, LOKI_PASSWORD. Deploy: `fly deploy` from this directory.
+app = "relaynet-logs"
+primary_region = "sjc"
+
+[build]
+  image = "ghcr.io/superfly/fly-log-shipper:latest"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

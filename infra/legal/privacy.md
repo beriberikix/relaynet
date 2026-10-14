@@ -17,7 +17,7 @@ and why. Contact: privacy@relaynet.network.
   transferred and start and end time. These are kept for **30 days** to
   investigate abuse reports, then deleted.
 - **Network data**: your IP address while a session is open, and in
-  operational logs used to run and secure the service ([[log retention]]).
+  operational logs used to run and secure the service (kept 14 days).
 
 relaynet does not record or inspect the contents of your traffic, and cannot
 read encrypted (TLS) traffic.
@@ -35,7 +35,8 @@ sold, and nothing is used for advertising.
 | Fly.io | Hosts the relay and its database |
 | Cloudflare | DNS, network edge, website hosting, encrypted backups (R2) |
 | Auth0 (Okta) | Sign-in |
-| [[Better Stack / Grafana Labs, once set up]] | Uptime monitoring and operational logs |
+| Better Stack | Uptime monitoring and status page |
+| Grafana Labs | Metrics and operational logs |
 
 Data may be processed in the United States.
 

@@ -1,0 +1,573 @@
+{
+  "uid": "relaynet-relay",
+  "title": "relaynet relay",
+  "tags": [
+    "relaynet"
+  ],
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Live sessions",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum(rootlessrelay_sessions{app=\"relaynet\"})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Relayed (24h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum(increase(rootlessrelay_bytes_total{app=\"relaynet\"}[24h]))",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Uptime",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "time() - max(rootlessrelay_process_start_time_seconds{app=\"relaynet\"})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Memory available",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "min(fly_instance_memory_mem_available{app=\"relaynet\"} / fly_instance_memory_mem_total{app=\"relaynet\"})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Auth failures (1h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum(increase(rootlessrelay_auth_failures_total{app=\"relaynet\"}[1h]))",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Egress denials (1h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum(increase(rootlessrelay_egress_denied_total{app=\"relaynet\"}[1h]))",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Sessions by tier",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum by (tier) (rootlessrelay_sessions{app=\"relaynet\"})",
+          "legendFormat": "{{tier}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Throughput",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "stacking": {
+              "mode": "none"
+            },
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum by (direction) (rate(rootlessrelay_bytes_total{app=\"relaynet\"}[5m]))",
+          "legendFormat": "{{direction}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Rejected upgrades by status",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "stacking": {
+              "mode": "none"
+            },
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum by (status) (increase(rootlessrelay_upgrade_rejections_total{app=\"relaynet\"}[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Auth failures by reason",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "stacking": {
+              "mode": "none"
+            },
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum by (code) (increase(rootlessrelay_auth_failures_total{app=\"relaynet\"}[5m]))",
+          "legendFormat": "{{code}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Policy drops",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "stacking": {
+              "mode": "none"
+            },
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum(increase(rootlessrelay_egress_denied_total{app=\"relaynet\"}[5m]))",
+          "legendFormat": "egress denied"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum(increase(rootlessrelay_syn_rate_drops_total{app=\"relaynet\"}[5m]))",
+          "legendFormat": "SYN rate"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum(increase(rootlessrelay_connection_cap_denied_total{app=\"relaynet\"}[5m]))",
+          "legendFormat": "conn cap"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP responses at the relay",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "stacking": {
+              "mode": "none"
+            },
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "sum by (status) (increase(fly_app_http_responses_count{app=\"relaynet\"}[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "stacking": {
+              "mode": "none"
+            },
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "max(fly_instance_memory_mem_total{app=\"relaynet\"} - fly_instance_memory_mem_available{app=\"relaynet\"})",
+          "legendFormat": "used"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "max(rootlessrelay_nodejs_heap_size_used_bytes{app=\"relaynet\"})",
+          "legendFormat": "node heap"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Event loop lag p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fly-relaynet"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "stacking": {
+              "mode": "none"
+            },
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fly-relaynet"
+          },
+          "expr": "max(rootlessrelay_nodejs_eventloop_lag_p99_seconds{app=\"relaynet\"})",
+          "legendFormat": "p99"
+        }
+      ]
+    }
+  ]
+}

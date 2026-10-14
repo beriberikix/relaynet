@@ -19,7 +19,7 @@ Facts the drafts rely on, checked against the deployment on 2026-10-14:
 | API token hashes and prefixes (never the token) | same | until the account is deleted |
 | Monthly usage: bytes in/out, session count | same | until the account is deleted |
 | Connection audit: destination IP and port, protocol, verdict, bytes, start/end time, account id | same | 30 days (`AUDIT_RETENTION_DAYS`) |
-| Client IP address | in memory per session; application logs on Fly | logs: [[log retention once shipping is set up]] |
+| Client IP address | in memory per session; application logs on Fly | Fly log stream → Grafana Cloud Loki, 14 days (free tier) |
 | Database backups (Litestream to Cloudflare R2, planned) | R2 | 7 days |
 | Sign-in records | Auth0 | per Auth0's policy |
 
