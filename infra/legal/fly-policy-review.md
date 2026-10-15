@@ -36,7 +36,7 @@ advice.
    reason to form an LLC before paid tiers, and to keep the AUP strict.
 4. **Shared egress reputation.** Without a dedicated egress IP, relaynet
    traffic leaves from addresses shared with other Fly apps. A dedicated
-   egress IP (`fly machine egress-ip allocate`, billed monthly) keeps
+   egress IP (`fly ips allocate-egress`, app-scoped, billed monthly) keeps
    relaynet's reputation separate and makes abuse reports unambiguous.
    Recommended before the beta grows.
 
