@@ -1,0 +1,14 @@
+{
+  "name": "relaynet-probe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scheduled end-to-end probe of the relay (Cloudflare Worker cron)",
+  "scripts": {
+    "deploy": "cf deploy"
+  },
+  "devDependencies": {
+    "cf": "^1.0.0-beta.17",
+    "wrangler": "^4.151.0"
+  },
+  "type": "module"
+}

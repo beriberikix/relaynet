@@ -46,9 +46,6 @@ def api(method, path, body=None, ok=(200, 201, 202, 204)):
 
 # name, PromQL, comparison, threshold, pending period, severity, summary
 RULES = [
-    ("Relay restarted", 'changes(rootlessrelay_process_start_time_seconds{app="relaynet"}[10m])',
-     "gt", 0, "0s", "warning",
-     "The relay process restarted (deploy, crash or machine replacement). Live sessions were dropped."),
     ("Sessions near capacity", 'sum(rootlessrelay_sessions{app="relaynet"})',
      "gt", 200, "5m", "warning",
      "More than 200 of the 240 addresses in the session pool are in use."),
@@ -109,6 +106,56 @@ def rule(name, expr, op, threshold, pending, severity, summary):
     }
 
 
+# A restart with no clean shutdown logged just before it: a crash, an
+# out-of-memory kill or a host failure, not a deploy. On a deploy or a
+# `fly machine restart`, Fly sends SIGINT and the relay logs
+# {"msg":"shutting down",...,"code":0}; a crash logs code 1 or nothing.
+UNEXPECTED_RESTART = {
+    "uid": "relaynet-relay-restarted",  # same uid as the old "Relay restarted" rule, replaced in place
+    "title": "Relay restarted unexpectedly",
+    "condition": "C",
+    "data": [
+        {
+            "refId": "A",
+            "relativeTimeRange": {"from": 900, "to": 0},
+            "datasourceUid": DS,
+            "model": {"refId": "A", "instant": True, "intervalMs": 1000, "maxDataPoints": 43200,
+                      "expr": 'sum(changes(rootlessrelay_process_start_time_seconds{app="relaynet"}[10m]))'},
+        },
+        {
+            "refId": "B",
+            "relativeTimeRange": {"from": 900, "to": 0},
+            "datasourceUid": "{loki}",
+            "model": {"refId": "B", "queryType": "instant", "intervalMs": 1000, "maxDataPoints": 43200,
+                      "expr": 'sum(count_over_time({fly_app_name="relaynet"} |= `"msg":"shutting down"` |= `"code":0` [15m])) or vector(0)'},
+        },
+        {
+            "refId": "C",
+            "datasourceUid": "__expr__",
+            "model": {"refId": "C", "type": "math", "expression": "$A > 0 && $B == 0"},
+        },
+    ],
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "for": "1m",
+    "labels": {"team": "relaynet", "severity": "critical"},
+    "annotations": {
+        "summary": "The relay restarted without a clean shutdown (crash, out-of-memory kill or host failure); live sessions were dropped. Check `fly logs -a relaynet` around the restart.",
+        "runbook_url": "https://github.com/beriberikix/relaynet/blob/main/infra/RUNBOOKS.md",
+    },
+    "folderUID": FOLDER_UID,
+    "ruleGroup": "relaynet",
+}
+
+
+def loki_uid():
+    status, sources = api("GET", "/api/datasources")
+    for source in sources if isinstance(sources, list) else []:
+        if source.get("type") == "loki":
+            return source["uid"]
+    raise SystemExit("no Loki data source found")
+
+
 def main():
     status, _ = api("POST", "/api/folders", {"uid": FOLDER_UID, "title": "relaynet"}, ok=(200, 409, 412))
     print("folder", status)
@@ -141,6 +188,13 @@ def main():
         if status == 404:
             status, body = api("POST", "/api/v1/provisioning/alert-rules", r)
         print("rule", r["title"], status, "" if status in (200, 201) else body)
+
+    r = json.loads(json.dumps(UNEXPECTED_RESTART).replace("{loki}", loki_uid()))
+    r["orgID"] = 1
+    status, body = api("PUT", f"/api/v1/provisioning/alert-rules/{r['uid']}", r)
+    if status == 404:
+        status, body = api("POST", "/api/v1/provisioning/alert-rules", r)
+    print("rule", r["title"], status, "" if status in (200, 201) else body)
 
     dashboard = json.loads((HERE / "relay-dashboard.json").read_text())
     status, body = api("POST", "/api/dashboards/db", {"dashboard": dashboard, "folderUid": FOLDER_UID, "overwrite": True})

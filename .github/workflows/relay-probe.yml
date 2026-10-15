@@ -1,12 +1,11 @@
 name: relay probe
 
-# Hourly end-to-end check of the hosted relay (auth, DHCP, DNS egress) with
-# the dedicated "probe" account. Success pings the Better Stack heartbeat;
-# failure reports to it immediately, and a missed run alerts after the grace
-# period.
+# On-demand end-to-end check of the hosted relay (auth, DHCP, DNS egress)
+# with the dedicated "probe" account, reporting to the Better Stack heartbeat.
+# The scheduled probe runs every 5 minutes as the Cloudflare Worker in
+# infra/probe-worker; GitHub's cron skipped most hourly runs and set off
+# missed-heartbeat alerts.
 on:
-  schedule:
-    - cron: "23 * * * *"
   workflow_dispatch:
 
 permissions:

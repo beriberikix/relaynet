@@ -59,21 +59,24 @@ session is the only path in. There is no public admin URL by design.
 ## Monitoring and alerting
 
 Set up 2026-10-14. Credentials live in `infra/.env.local` (gitignored);
-GitHub Actions secrets hold the probe token and heartbeat URL.
+GitHub Actions secrets and the probe Worker's secrets hold the probe token
+and heartbeat URL.
 
 | What | Where | Alerts |
 |---|---|---|
 | Uptime: `relay.relaynet.network/healthz` (keyword `"ok":true`) and `relaynet.network`, every 3 min from US and EU | Better Stack Uptime (team t615516), monitors "Relay health", "Dashboard" | email + push |
-| End-to-end probe: API token auth, DHCP lease, DNS lookup through the relay (`infra/probe/probe.mjs`), hourly | GitHub Actions `relay-probe.yml`, account `probe` (user tier) | Better Stack heartbeat "Relay end-to-end probe": `/fail` on error, missed run after 30 min grace |
+| End-to-end probe: API token auth, DHCP lease, DNS lookup through the relay, every 5 min, one retry | Cloudflare Worker `relaynet-probe` (`infra/probe-worker`, cron trigger; secrets `PROBE_RELAY_TOKEN`, `BETTERSTACK_PROBE_HEARTBEAT_URL`), account `probe` (user tier). Deploy probes and manual runs use `infra/probe/probe.mjs` in GitHub Actions | Better Stack heartbeat "Relay end-to-end probe" (period 5 min, grace 5 min): `/fail` on error |
 | Public status page | https://status.relaynet.network (CNAME to Better Stack, DNS-only) | — |
 | Metrics: relay (`rootlessrelay_*`) and Fly platform (`fly_*`) | Grafana Cloud stack `calmwasp3063`, data source `fly-relaynet` (Fly managed Prometheus, read-only org token `grafana-metrics-readonly`), dashboard "relaynet relay" | Grafana alert rules in folder `relaynet` → contact point "relaynet email" |
 | Logs | Fly app `relaynet-logs` (fly-log-shipper, subject `logs.relaynet.>`) → Grafana Cloud Loki; query `{fly_app_name="relaynet"}` | — |
 | Backups | weekly `backup-restore-check.yml` | opens a GitHub issue |
 
 Alert rules (`infra/grafana/provision.py`, re-run after edits): relay
-restarted, sessions above 200 of 240, memory under 15% free, 5xx at the
+restarted unexpectedly (a restart with no clean shutdown in the logs, so
+deploys stay quiet), sessions above 200 of 240, memory under 15% free, 5xx at the
 relay, authentication-failure spike, egress-denial spike (scanning), more
-than 10 GB relayed per hour (cost).
+than 10 GB relayed per hour (cost), CPU burst balance low and CPU throttled
+(see RUNBOOKS.md, Capacity).
 
 Known gap: Fly does not scrape Litestream's own metrics endpoint (:9090, a
 second `[[metrics]]` block); replication health is covered by the weekly
