@@ -83,7 +83,10 @@ RULES = [
     ("Backup metrics missing", 'absent(litestream_db_size{app="relaynet"})',
      "gt", 0, "15m", "warning",
      "Litestream's metrics have not been scraped for 15 minutes while the relay is up; replication state is unknown."),
-    ("No backup uploads in 26h", 'sum(increase(litestream_replica_operation_total{app="relaynet",operation="PUT"}[26h]))',
+    ("No backup uploads in 26h", # Only once ~25 h of samples exist (15 s scrapes), so a fresh series or
+     # machine cannot fire before its first daily snapshot.
+     'sum(increase(litestream_replica_operation_total{app="relaynet",operation="PUT"}[26h])) '
+     'and on() (sum(count_over_time(litestream_db_size{app="relaynet"}[26h])) > 6000)',
      "lt", 1, "30m", "critical",
      "Litestream has uploaded nothing to R2 for 26 hours, although it snapshots daily. Check `fly logs` for litestream errors."),
 ]
