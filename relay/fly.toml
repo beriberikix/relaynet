@@ -47,6 +47,8 @@ kill_timeout = 15
   # Open the panel at http://localhost:8001 (the registered callback host).
   ADMIN_OIDC_ISSUER = "https://jonathanberi.us.auth0.com/"
   ADMIN_OIDC_REDIRECT_URL = "http://localhost:8001/auth/callback"
+  # SSO only: the password form and POST /api/login are disabled.
+  ADMIN_PASSWORD_LOGIN = "false"
 
   # Fly's metrics scraper reads /metrics over the private network without auth.
   METRICS_ENABLED = "true"
