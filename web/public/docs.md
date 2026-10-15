@@ -44,8 +44,9 @@ HTTP:
   GDB remote protocol to `gdb` on one of your machines.
 - **KVM and consoles.** VNC (RFB), IPMI (UDP 623) and serial-over-TCP
   consoles of hosts with public addresses. Most KVMs sit on private
-  networks, which relaynet cannot reach directly; you need a machine on that
-  network joined to your account (and then a VPN may be simpler).
+  networks, which relaynet cannot reach directly; run relaynet-bridge on a
+  machine on that network, such as `relaynet-bridge -expose
+  5900=192.168.1.40:5900`.
 - **Custom, encrypted and peer-to-peer protocols.** TCP and UDP to any public
   host and port except 25: WireGuard, QUIC, libp2p transports, Noise-based or
   proprietary protocols, game networking.
@@ -82,17 +83,29 @@ Every client needs something that turns sockets into Ethernet frames:
 
 All sessions of one account share `10.0.2.0/24` and can reach each other by
 address, while other accounts' sessions are invisible. To put a regular
-computer on that network, run a small bridge on it: a program that opens a
-TAP interface, sends each frame read from it as a WebSocket message, and
-writes each message received back to the interface. relaynet does not ship
-a bridge yet. Give the TAP interface a static address from
-`10.0.2.15`–`10.0.2.254` (for example `ip addr add 10.0.2.200/24 dev tap0`)
-rather than running DHCP on it, so the machine's default route stays on its
-own network. A browser session on the same account can then connect to
-`10.0.2.200` directly, with no inbound port open on the machine.
+computer on that network, run
+[relaynet-bridge](https://github.com/beriberikix/relaynet-bridge) on it. It
+connects out to the relay with your token, so no inbound port is opened.
 
-An account can hold 4 sessions at once, so this suits a few devices, not a
-fleet.
+```sh
+export RELAYNET_TOKEN=rr_...
+# Let your sessions reach this machine's USB/IP server and SSH (no root):
+relaynet-bridge -expose 3240 -expose 2222=127.0.0.1:22
+# Reach port 3240 of the session at 10.0.2.15 as localhost:3240 (no root):
+relaynet-bridge -forward 3240=10.0.2.15:3240
+# Or give the machine an interface with the session address (root; Linux, macOS):
+sudo -E relaynet-bridge -tun
+```
+
+The bridge logs the address it joined with, such as `10.0.2.17`. `-tun`
+adds a route for `10.0.2.0/24` only, so the machine's default route stays on
+its own network. `-ip 10.0.2.200` asks for a fixed address. After a
+reconnect the bridge reclaims its address unless another session took it.
+
+An account can hold 4 sessions at once, and the bridge uses one, so this
+suits a few devices, not a fleet. Anything else that sends and receives
+Ethernet frames over the WebSocket works too, such as a TAP interface
+bridged by your own program.
 
 ## Quick start
 
