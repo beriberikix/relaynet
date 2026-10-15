@@ -38,7 +38,7 @@ advice.
    traffic leaves from addresses shared with other Fly apps. A dedicated
    egress IP (`fly ips allocate-egress`, app-scoped, billed monthly) keeps
    relaynet's reputation separate and makes abuse reports unambiguous.
-   Recommended before the beta grows.
+   Done 2026-10-14: `209.71.113.1` and `2a09:8280:e633:1:0:1b6:a721:0` (sjc).
 
 ## Draft note to Fly support
 
@@ -48,5 +48,5 @@ advice.
 > connections through the app. We block SMTP, private/metadata ranges and
 > scanning patterns, rate-limit per account, log destinations for 30 days
 > to handle abuse reports, and require accounts (no anonymous use). Is this
-> use acceptable under your Terms (§1.1/§1.4(d)) and AUP? Anything you'd
-> like us to do differently, such as a dedicated egress IP?
+> use acceptable under your Terms (§1.1/§1.4(d)) and AUP? We use
+> a dedicated egress IP. Anything you'd like us to do differently?

@@ -27,7 +27,10 @@ A pending account can also be activated directly from **Users** → **Activate**
 ## Respond to an abuse report
 
 Reports name a destination (IP, port) and a time. Aim to answer within two
-business days; act on anything ongoing immediately.
+business days; act on anything ongoing immediately. Relay traffic leaves
+from the dedicated egress IPs `209.71.113.1` and
+`2a09:8280:e633:1:0:1b6:a721:0` (`fly ips list -a relaynet`, region sjc); a
+report naming another source address is not about relaynet.
 
 1. Panel → **Audit Log**. Enter the destination IP, the port if given, and
    the time converted to your local time zone in **At**; keep ±5 minutes,
@@ -139,3 +142,51 @@ Each `fly secrets set` restarts the machine and closes live sessions.
    manual backups, or `fly volumes extend`.
 4. Cloudflare in front returns 52x but `https://relaynet.fly.dev/healthz`
    works: check the Cloudflare DNS record and SSL mode (Full strict).
+
+## Capacity
+
+Limits on the production machine (shared-cpu-1x, 1 GB), from a load test on
+2026-10-14 (staging resized to match):
+
+| Resource | Limit | Observed |
+|---|---|---|
+| Sessions | 240 (address pool); session 241 gets HTTP 503 | 240 open, 5 refused cleanly |
+| Memory | 1 GB | ~270 MB RSS at 240 sessions with 100 downloading |
+| CPU | Fly shared CPU: 6% baseline plus a burst balance earned while idle | 240 sessions + 48 DNS q/s + 3 MiB/s used ~30%; the balance ran out after ~2 min, then Fly throttled the machine (steal 91%, event-loop lag 1.4 s, DNS p95 4 s) |
+
+CPU is the binding limit. Grafana alerts **CPU burst balance low** and
+**CPU throttled** fire first. To scale:
+
+```sh
+fly scale vm shared-cpu-2x -a relaynet      # doubles the baseline; cheap
+fly scale vm performance-1x -a relaynet     # a dedicated core; no throttling
+```
+
+Both restart the machine (live sessions drop). Scale before inviting a large
+batch rather than during an incident.
+
+Also seen: the relay's TCP sender starts at a 10 KB congestion window and
+grows by one segment per round trip (no slow start), so a client 250 ms away
+gets tens of KB/s for the first seconds of each connection. Upstream code;
+an improvement candidate for rootlessRelay.
+
+## Load test
+
+`infra/load/load.mjs` opens many sessions from one process: DHCP, a DNS query
+every 5 s each, and optionally HTTP downloads through a minimal TCP client.
+Run it against staging only, with the caps raised for the probe account:
+
+```sh
+fly scale memory 1024 -a relaynet-staging    # match production
+fly secrets set -a relaynet-staging TIERS_JSON='{"user":{"maxSessionsPerOwner":300,"maxSessionsPerIP":300}}'
+fly proxy 8002:8001 -a relaynet-staging &    # /metrics for RSS, CPU, event-loop lag
+set -a; . relay/.env.staging.local; set +a
+RELAY_TOKEN=$STAGING_PROBE_RELAY_TOKEN SESSIONS=245 DOWNLOADERS=100 HOLD_S=180 node infra/load/load.mjs
+# afterwards, always:
+fly secrets unset -a relaynet-staging TIERS_JSON
+fly scale memory 512 -a relaynet-staging
+```
+
+Watch Fly's CPU throttling in Grafana (`fly_instance_cpu_balance`,
+`fly_instance_cpu_throttle`). Downloads come from speed.cloudflare.com and
+count against Fly egress.
