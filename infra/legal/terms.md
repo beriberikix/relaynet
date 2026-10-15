@@ -1,10 +1,10 @@
 # relaynet Terms of Service
 
-_Draft, not in effect. Last updated [[date]]._
+_Effective October 14, 2026._
 
 relaynet ("the service") is a hosted network relay for virtual machines that
-run in a web browser. It is operated by [[operator name]] ("I", "me"), an
-individual based in [[jurisdiction]]. By creating an account or using the
+run in a web browser. It is operated by Jonathan Beri ("I", "me"), an
+individual based in California, United States. By creating an account or using the
 service you agree to these terms and to the [Acceptable Use Policy](acceptable-use)
 and [Privacy Policy](privacy).
 
@@ -31,6 +31,14 @@ every user; I enforce the policy strictly.
 Each account has limits (bandwidth, sessions, connections, monthly data)
 shown on the dashboard. Exceeding them closes sessions or refuses new ones.
 
+## Changes to the service
+
+The beta may change, pause or end. If I shut relaynet down I will give at
+least 30 days' notice on the site and by email, except where I must act
+sooner to stop abuse or comply with law. Paid plans, when they arrive, will
+be optional and announced in advance; nothing you use for free today will
+start costing money without your agreement.
+
 ## Suspension and termination
 
 I may suspend or delete an account, without notice, if I reasonably believe
@@ -52,6 +60,15 @@ service in violation of these terms or the law.
 
 ## General
 
-These terms are governed by the laws of [[jurisdiction]], without regard to
-conflict-of-law rules. If a provision is unenforceable, the rest remain in
-effect. Questions: support@relaynet.network.
+These terms are governed by the laws of the State of California, without regard to
+conflict-of-law rules, and disputes will be resolved in the state or
+federal courts located in California, unless the law where you live gives
+you the right to bring a claim in your local courts. If a provision is
+unenforceable, the rest remain in effect. These terms, the Acceptable Use
+Policy and the Privacy Policy are the whole agreement between us about the
+service.
+
+## Contact
+
+Questions: support@relaynet.network. Abuse reports: abuse@relaynet.network.
+Security issues: security@relaynet.network.

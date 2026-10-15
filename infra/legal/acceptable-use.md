@@ -1,6 +1,6 @@
 # relaynet Acceptable Use Policy
 
-_Draft, not in effect. Last updated [[date]]._
+_Effective October 14, 2026._
 
 relaynet gives browser virtual machines a path to the internet through shared
 addresses. This policy keeps those addresses usable for everyone. It applies

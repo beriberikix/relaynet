@@ -226,3 +226,10 @@ ul.plain li:last-child { border-bottom: 0; }
   .topnav a:not(.btn) { display: none; }
   .table th:nth-child(4), .table td:nth-child(4) { display: none; }
 }
+
+/* Legal pages */
+main.legal { max-width: 760px; line-height: 1.6; }
+main.legal h1 { margin-bottom: 4px; }
+main.legal h2 { margin-top: 28px; font-size: 1.15rem; }
+main.legal ul { padding-left: 20px; }
+main.legal li { margin: 6px 0; }

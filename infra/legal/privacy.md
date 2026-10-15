@@ -1,8 +1,8 @@
 # relaynet Privacy Policy
 
-_Draft, not in effect. Last updated [[date]]._
+_Effective October 14, 2026._
 
-This policy explains what relaynet, operated by [[operator name]], collects
+This policy explains what relaynet, operated by Jonathan Beri, collects
 and why. Contact: privacy@relaynet.network.
 
 ## What is collected
@@ -28,6 +28,25 @@ To provide and secure the service, enforce limits and the Acceptable Use
 Policy, answer abuse reports, and contact you about your account. Nothing is
 sold, and nothing is used for advertising.
 
+## Legal bases
+
+Where data-protection law such as the GDPR applies: account, token and usage
+data are processed to provide the service you signed up for (contract);
+connection records and network data are processed to keep the service and
+the internet safe from abuse and to answer abuse reports (legitimate
+interests); emails about your account are part of the service.
+
+## Cookies and tracking
+
+The dashboard stores your sign-in session in your browser (Auth0) and sets
+no advertising or analytics cookies. There are no third-party trackers.
+
+## Security
+
+Traffic to relaynet is encrypted (TLS). API tokens are stored only as
+hashes. The operator panel is not reachable from the internet and requires
+multi-factor authentication. Database backups are kept in a private bucket.
+
 ## Who processes it
 
 | Provider | Role |
@@ -38,7 +57,8 @@ sold, and nothing is used for advertising.
 | Better Stack | Uptime monitoring and status page |
 | Grafana Labs | Metrics and operational logs |
 
-Data may be processed in the United States.
+Data may be processed in the United States and other countries where these
+providers operate, under their data-processing terms.
 
 ## Retention and deletion
 
@@ -53,6 +73,11 @@ You can see your account data on the dashboard, and ask for a copy, a
 correction or deletion at privacy@relaynet.network. Depending on where you
 live you may have further rights, including complaining to a data
 protection authority.
+
+## Children
+
+relaynet is not meant for anyone under 16, and I do not knowingly collect
+data from children.
 
 ## Changes
 

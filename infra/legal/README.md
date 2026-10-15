@@ -1,15 +1,22 @@
 # Legal page drafts
 
-Drafts of the Terms of Service, Acceptable Use Policy and Privacy Policy for
-relaynet.network. They are **not published**. Before they go live:
+Terms of Service, Acceptable Use Policy and Privacy Policy for
+relaynet.network. The Markdown here is the source; `web/public/terms.html`,
+`acceptable-use.html` and `privacy.html` are generated from it with
+`python3 build.py` (run from this directory).
 
-1. Fill in every `[[…]]` placeholder (operator name as it should appear,
-   jurisdiction, contact address or mail-forwarding service).
-2. Have a lawyer review them, especially before paid tiers launch.
-3. Set up `support@`, `abuse@`, `privacy@` and `security@relaynet.network`
-   (Cloudflare Email Routing), which the pages reference.
-4. Then they become `web/public/terms.html`, `acceptable-use.html` and
-   `privacy.html`, linked from the footer and the sign-in flow.
+Assumptions to confirm before publishing (drafted 2026-10-14):
+
+- Operator named as "Jonathan Beri", an individual; no postal address is
+  published (contact by email only). Some laws (GDPR, some US states) expect
+  a postal address for the data controller; add one or a mail-forwarding
+  service if you have EU users.
+- Governing law and courts: California. Change if you live elsewhere.
+- Minimum age 16. Liability cap USD 50 during the free beta.
+- Not reviewed by a lawyer. Get a review before paid tiers.
+
+The email addresses used (support@, abuse@, privacy@, security@) forward
+to the operator through Cloudflare Email Routing.
 
 Facts the drafts rely on, checked against the deployment on 2026-10-14:
 

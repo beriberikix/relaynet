@@ -4,8 +4,13 @@ All operator actions go through the private admin panel:
 
 ```sh
 fly proxy 8001:8001 -a relaynet
-open http://127.0.0.1:8001
+open http://localhost:8001        # localhost, not 127.0.0.1: the SSO callback host
 ```
+
+Sign in with **single sign-on** (Auth0 app `relaynet-admin`, MFA required).
+Operators are accounts with role `operator` whose Auth0 identity matches;
+promote one from Users → **Make operator**. Staging: `fly proxy 8002:8001 -a
+relaynet-staging` (password login, credentials in `relay/.env.staging.local`).
 
 ## Invite a beta tester
 
@@ -38,16 +43,27 @@ Audit rows are kept 30 days; ban decisions do not expire.
 
 ## Deploy the relay
 
-1. Tag a fork release (`vX.Y.Z-hosted.N`) after CI is green.
-2. In `relay/package.json` point the tarball at the tag, run `npm install`.
-3. If the release has a database migration, take a manual copy first (see Backups).
-4. `fly deploy --ha=false` from `relay/`. Every deploy closes live sessions;
-   prefer quiet hours. Clients reconnect on their own.
-5. Check `curl -s https://relay.relaynet.network/healthz` and `fly logs`.
+1. Tag a fork release (`vX.Y.Z-hosted.N`) after its CI is green.
+2. In `relay/package.json` point the tarball at the tag, run `npm install`,
+   commit and push. The **deploy relay** workflow deploys
+   `relaynet-staging` and probes it.
+3. If the release has a database migration, take a manual copy of
+   production first (see Backups).
+4. Actions → **deploy relay** → Run workflow with **production** checked.
+   It redeploys staging, probes it, then deploys and probes production.
+   Every production deploy closes live sessions; prefer quiet hours.
+5. Check `curl -s https://relay.relaynet.network/healthz` and the Grafana
+   dashboard.
+
+By hand, if Actions is unavailable: `fly deploy --ha=false` from `relay/`
+(staging: `fly deploy -c fly.staging.toml --ha=false`).
 
 Roll back with `fly releases -a relaynet` and
 `fly deploy --ha=false --image <previous image>`. A migration cannot be rolled
 back by an older image; restore the pre-deploy backup instead.
+
+The Fly deploy tokens in Actions secrets (`FLY_DEPLOY_TOKEN_*`) expire on
+2027-10-14; renew with `fly tokens create deploy -a <app> -x 8760h`.
 
 ## Deploy the website
 
@@ -80,7 +96,7 @@ before starting the relay. If the restore fails the machine refuses to start
 ```sh
 cd relay && set -a && . ./.env.local && set +a
 export LITESTREAM_ACCESS_KEY_ID=$R2_RO_ACCESS_KEY_ID LITESTREAM_SECRET_ACCESS_KEY=$R2_RO_SECRET_ACCESS_KEY
-export LITESTREAM_REPLICA_PATH=prod ADMIN_AUTH_DB_PATH=/data/relay.sqlite
+export LITESTREAM_BUCKET=relaynet-backups LITESTREAM_REPLICA_PATH=prod ADMIN_AUTH_DB_PATH=/data/relay.sqlite
 litestream restore -config litestream.yml -timestamp 2026-10-14T20:00:00Z \
   -integrity-check full -o ./restored.sqlite /data/relay.sqlite
 sqlite3 ./restored.sqlite "SELECT COUNT(*) FROM users;"      # inspect it
