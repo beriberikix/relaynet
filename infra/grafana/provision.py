@@ -110,6 +110,8 @@ def rule(name, expr, op, threshold, pending, severity, summary):
 # out-of-memory kill or a host failure, not a deploy. On a deploy or a
 # `fly machine restart`, Fly sends SIGINT and the relay logs
 # {"msg":"shutting down",...,"code":0}; a crash logs code 1 or nothing.
+# fly-log-shipper wraps each line in Fly's JSON envelope, so the relay's
+# quotes arrive escaped (\"code\":0); the regex matches either form.
 UNEXPECTED_RESTART = {
     "uid": "relaynet-relay-restarted",  # same uid as the old "Relay restarted" rule, replaced in place
     "title": "Relay restarted unexpectedly",
@@ -127,7 +129,7 @@ UNEXPECTED_RESTART = {
             "relativeTimeRange": {"from": 900, "to": 0},
             "datasourceUid": "{loki}",
             "model": {"refId": "B", "queryType": "instant", "intervalMs": 1000, "maxDataPoints": 43200,
-                      "expr": 'sum(count_over_time({fly_app_name="relaynet"} |= `"msg":"shutting down"` |= `"code":0` [15m])) or vector(0)'},
+                      "expr": 'sum(count_over_time({fly_app_name="relaynet"} |~ `shutting down.*code\\W{1,4}0\\b` [15m])) or vector(0)'},
         },
         {
             "refId": "C",
