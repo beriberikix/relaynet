@@ -165,10 +165,11 @@ fly scale vm performance-1x -a relaynet     # a dedicated core; no throttling
 Both restart the machine (live sessions drop). Scale before inviting a large
 batch rather than during an incident.
 
-Also seen: the relay's TCP sender starts at a 10 KB congestion window and
-grows by one segment per round trip (no slow start), so a client 250 ms away
-gets tens of KB/s for the first seconds of each connection. Upstream code;
-an improvement candidate for rootlessRelay.
+Per-connection speed toward a VM is window-limited: `TCP_WINDOW_SIZE=65535`
+(the maximum without window scaling) allows 64 KiB per round trip, and the
+relay uses slow start since hosted.9 (2026-10-15). The upstream 10 KiB default
+had capped a client 250 ms away at ~40 KB/s per connection. Going beyond
+64 KiB needs TCP window scaling in the relay.
 
 ## Load test
 

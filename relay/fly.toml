@@ -31,6 +31,11 @@ kill_timeout = 15
   # people embedding relaynet in their own sites.
   SESSION_ALLOWED_ORIGINS = "*"
 
+  # TCP window toward VMs: the largest possible without window scaling. The
+  # 10 KiB default caps each connection at 10 KiB per round trip (about
+  # 40 KB/s for a user 250 ms away); 64 KiB with slow start is ~5x faster.
+  TCP_WINDOW_SIZE = "65535"
+
   # No anonymous tier: every session needs an account (invite-only beta).
   ANON_ENABLED = "false"
 

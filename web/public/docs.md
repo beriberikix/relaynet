@@ -351,9 +351,10 @@ and returns JSON. Everything is scoped to your own account.
   HTTP request.
 - **Connections to a private address are refused.** Private and reserved
   ranges are blocked by design; see [Outbound rules](#outbound-rules).
-- **Downloads start slowly.** Each TCP connection starts with a small window
-  that grows with each round trip, so connections from far away from
-  California take several seconds to reach full speed.
+- **Downloads are slower from far away.** Each TCP connection can have at
+  most 64 KiB in flight toward the VM, so its speed is about 64 KiB per round
+  trip to the relay in California (roughly 250 KB/s at 250 ms), up to the
+  1 MiB/s session limit. Use parallel connections for large transfers.
 - **Mail does not send.** Port 25 is blocked; use 587 or 465.
 
 ## Notes for AI agents

@@ -20,6 +20,9 @@ const HOLD_S = Number(process.env.HOLD_S || 60);
 const DNS_INTERVAL_MS = Number(process.env.DNS_INTERVAL_MS || 5000);
 const DOWNLOAD_HOST = process.env.DOWNLOAD_HOST || "speed.cloudflare.com";
 const DOWNLOAD_PATH = process.env.DOWNLOAD_PATH || "/__down?bytes=2000000";
+// Delays every TCP segment the client sends, adding this much to the round
+// trip between the relay and the "VM" (simulates a distant user).
+const ACK_DELAY_MS = Number(process.env.ACK_DELAY_MS || 0);
 
 if (!TOKEN) {
   console.error("load: RELAY_TOKEN is required");
@@ -139,7 +142,7 @@ function dhcpOption(payload, code) {
 const stats = {
   opened: 0, leased: 0, open: 0, connectFailed: 0, closedEarly: 0,
   dnsSent: 0, dnsOk: 0, dnsLatency: [],
-  downloadsOk: 0, downloadsFailed: 0, bytesDown: 0, outOfOrder: 0,
+  downloadsOk: 0, downloadsFailed: 0, bytesDown: 0, outOfOrder: 0, downloadMs: [],
   closeCodes: new Map(),
 };
 const pct = (arr, p) => {
@@ -166,10 +169,15 @@ function startSession(index, downloader) {
   const sendUdp = (dstIP, srcPort, dstPort, payload) => send(ipv4Frame({
     srcMac: mac, dstMac: s.lease.gatewayMac, srcIP: s.lease.ip, dstIP, proto: 17, body: udpBody(srcPort, dstPort, payload),
   }));
-  const sendTcp = (c, flags, payload) => send(ipv4Frame({
+  const sendTcpNow = (c, flags, payload) => send(ipv4Frame({
     srcMac: mac, dstMac: s.lease.gatewayMac, srcIP: s.lease.ip, dstIP: c.dstIP, proto: 6,
     body: tcpBody({ srcIP: s.lease.ip, dstIP: c.dstIP, srcPort: c.srcPort, dstPort: 80, seq: c.seq, ack: c.ack, flags, payload }),
   }));
+  const sendTcp = (c, flags, payload) => {
+    if (!ACK_DELAY_MS) { sendTcpNow(c, flags, payload); return; }
+    const snapshot = { ...c };
+    setTimeout(() => sendTcpNow(snapshot, flags, payload), ACK_DELAY_MS);
+  };
 
   let dnsId = (index * 7919) & 0xffff;
   function resolve(name) {
@@ -196,6 +204,7 @@ function startSession(index, downloader) {
       const dstIP = msg && firstA(msg);
       if (!dstIP) { stats.downloadsFailed += 1; await sleep(1000); continue; }
       srcPort = srcPort >= 60000 ? 10000 : srcPort + 1;
+      const downloadStarted = Date.now();
       const ok = await new Promise((done) => {
         const c = { dstIP, srcPort, seq: Math.floor(Math.random() * 2 ** 31), ack: 0, state: "syn", got: 0, done };
         c.timer = setTimeout(() => { s.tcp = null; done(false); }, 60000);
@@ -203,7 +212,7 @@ function startSession(index, downloader) {
         sendTcp(c, SYN);
         c.seq += 1;
       });
-      if (ok) stats.downloadsOk += 1; else stats.downloadsFailed += 1;
+      if (ok) { stats.downloadsOk += 1; stats.downloadMs.push(Date.now() - downloadStarted); } else stats.downloadsFailed += 1;
     }
   }
 
@@ -319,6 +328,9 @@ clearInterval(reporter);
 report("final ");
 if (stats.closeCodes.size) console.log("close codes:", Object.fromEntries(stats.closeCodes));
 console.log(`downloaded ${(stats.bytesDown / 1024 / 1024).toFixed(0)} MiB`);
+if (stats.downloadMs.length) {
+  console.log(`download time p50=${pct(stats.downloadMs, 50)}ms p95=${pct(stats.downloadMs, 95)}ms (${stats.downloadMs.length} downloads)`);
+}
 for (const s of sessions) { s.timers.forEach(clearInterval); try { s.ws.close(1000, "load done"); } catch {} }
 await sleep(500);
 process.exit(0);
