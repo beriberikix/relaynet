@@ -42,6 +42,11 @@ kill_timeout = 15
   ADMIN_BIND_ADDRESS = "::"
   ADMIN_COOKIE_SECURE = "false"
   ADMIN_TRUST_PROXY = "false"
+  # Operator single sign-on through Auth0 (app relaynet-admin, MFA required).
+  # Client id and secret are Fly secrets; without them SSO stays off.
+  # Open the panel at http://localhost:8001 (the registered callback host).
+  ADMIN_OIDC_ISSUER = "https://jonathanberi.us.auth0.com/"
+  ADMIN_OIDC_REDIRECT_URL = "http://localhost:8001/auth/callback"
 
   # Fly's metrics scraper reads /metrics over the private network without auth.
   METRICS_ENABLED = "true"
