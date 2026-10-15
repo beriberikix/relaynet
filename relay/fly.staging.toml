@@ -28,6 +28,10 @@ kill_timeout = 15
 
   # Browser origins allowed to open sessions and request anonymous tokens.
   ALLOWED_ORIGINS = "https://relaynet.network"  # staging
+  # Any page may open a session: sessions authenticate with the user's API
+  # token, never a cookie, so the origin adds no protection and only blocks
+  # people embedding relaynet in their own sites.
+  SESSION_ALLOWED_ORIGINS = "*"
 
   # No anonymous tier: every session needs an account (invite-only beta).
   ANON_ENABLED = "false"

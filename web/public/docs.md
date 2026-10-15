@@ -52,10 +52,9 @@ subprotocol list next to `relay.v1`, as in the quick start. The relay answers
 with `Sec-WebSocket-Protocol: relay.v1`; check `ws.protocol === "relay.v1"`
 after `open`.
 
-During the beta, sessions opened from a web page are accepted only from
-approved origins (the `Origin` header). If your page is on its own domain,
-email [support@relaynet.network](mailto:support@relaynet.network) with the
-origin (for example `https://example.github.io`) to have it added.
+Any web page may open a session; the token is what authorizes it. The
+account API (`/api/me`) only answers browser requests from the relaynet
+dashboard, so manage tokens there.
 
 ### v86
 
@@ -87,8 +86,7 @@ const emulator = new V86({
 ### From Node.js, Python or other programs
 
 Programs that can set headers may send the token as a bearer token instead of
-a subprotocol entry. They still request `relay.v1`. Programs that send no
-`Origin` header are not subject to the origin check.
+a subprotocol entry. They still request `relay.v1`.
 
 ```js
 // Node 22+ has WebSocket built in; with the "ws" package:
@@ -129,7 +127,7 @@ Connection: Upgrade
 Sec-WebSocket-Version: 13
 Sec-WebSocket-Key: <random>
 Sec-WebSocket-Protocol: relay.v1, relay.token.rr_abcd1234_...
-Origin: https://relaynet.network
+Origin: https://your-site.example
 ```
 
 On success the relay answers `101 Switching Protocols` with
@@ -237,7 +235,6 @@ client, to see the reason.
 | 401 | `token-revoked`, `token-expired` | Create a new token. |
 | 403 | `account-pending` | The account has not redeemed an invite. |
 | 403 | `account-suspended` | The account is suspended; contact support. |
-| 403 | `origin not allowed` | The page's origin is not approved; see [From a browser page](#from-a-browser-page). |
 | 429 | `session limit reached for this account` | Close another session first. |
 | 429 | `connection limit reached for this address` | Too many sessions from one client IP. |
 | 429 | `quota exceeded` | Monthly data quota used up. |
@@ -342,8 +339,9 @@ and returns JSON. Everything is scoped to your own account.
 ## Troubleshooting
 
 - **The WebSocket closes immediately (1006).** Run the `curl` check under
-  [API tokens](#api-tokens). If the token works, the page's origin is
-  probably not approved, or the account is at its session limit.
+  [API tokens](#api-tokens). If the token works, the account is probably at
+  its session limit (4); close a session in the dashboard or wait for idle
+  sessions to time out.
 - **The VM gets no address.** Check that its network card sends frames to the
   WebSocket and that frames from the relay reach it. The first message from
   the VM is usually a DHCPDISCOVER of about 300 bytes; the reply comes within
