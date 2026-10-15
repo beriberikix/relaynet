@@ -86,7 +86,12 @@ days with a daily snapshot. Fly also snapshots the volume daily (14 days).
   secrets (read-only), both Cloudflare user tokens named `relaynet-*`.
 - The **backup restore check** workflow restores weekly and opens an issue
   if it fails. Run it on demand from the Actions tab.
-- Litestream metrics are scraped from port 9090 (`litestream_*` in Grafana).
+- Litestream's metrics (`litestream_*`) reach Grafana through the relay's
+  `/metrics` (`METRICS_MERGE_URLS`), since Fly scrapes one endpoint per app.
+  Alerts: uploads failing, local sync errors, disk full, metrics missing,
+  and no upload in 26 h. For any of them, check `fly logs -a relaynet` for
+  litestream errors (R2 credentials, bucket, disk) and run the restore
+  check; a disk-full pause needs `fly volumes extend`.
 
 ## Restore the database
 

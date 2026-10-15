@@ -78,6 +78,7 @@ relay, authentication-failure spike, egress-denial spike (scanning), more
 than 10 GB relayed per hour (cost), CPU burst balance low and CPU throttled
 (see RUNBOOKS.md, Capacity).
 
-Known gap: Fly does not scrape Litestream's own metrics endpoint (:9090, a
-second `[[metrics]]` block); replication health is covered by the weekly
-restore check instead.
+Litestream's metrics are appended to the relay's `/metrics`
+(`METRICS_MERGE_URLS`; Fly scrapes one endpoint per app) and alert on upload
+or sync errors, a full disk, missing metrics and no upload in 26 h. The
+weekly restore check still proves the backups restore.

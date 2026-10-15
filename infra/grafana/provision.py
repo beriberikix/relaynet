@@ -70,6 +70,22 @@ RULES = [
     ("High egress volume", 'sum(increase(rootlessrelay_bytes_total{app="relaynet",direction="to_vm"}[1h]) + increase(rootlessrelay_bytes_total{app="relaynet",direction="from_vm"}[1h]))',
      "gt", 10 * 1024**3, "0s", "warning",
      "More than 10 GB relayed in the last hour. Fly bills egress; check who is using it."),
+    # Litestream (merged into the relay's /metrics via METRICS_MERGE_URLS).
+    ("Backup uploads failing", 'sum(increase(litestream_replica_operation_errors_total{app="relaynet"}[15m]))',
+     "gt", 10, "5m", "critical",
+     "Litestream's uploads to R2 are failing; database changes are not being backed up. See RUNBOOKS.md, Backups."),
+    ("Backup sync errors", 'sum(increase(litestream_sync_error_count{app="relaynet"}[15m]))',
+     "gt", 10, "5m", "critical",
+     "Litestream cannot sync the SQLite WAL locally; replication is stalled. See RUNBOOKS.md, Backups."),
+    ("Backup paused, disk full", 'max(litestream_disk_full{app="relaynet"})',
+     "gt", 0, "1m", "critical",
+     "Litestream paused replication because the volume is full. Extend the volume (RUNBOOKS.md, Backups)."),
+    ("Backup metrics missing", 'absent(litestream_db_size{app="relaynet"})',
+     "gt", 0, "15m", "warning",
+     "Litestream's metrics have not been scraped for 15 minutes while the relay is up; replication state is unknown."),
+    ("No backup uploads in 26h", 'sum(increase(litestream_replica_operation_total{app="relaynet",operation="PUT"}[26h]))',
+     "lt", 1, "30m", "critical",
+     "Litestream has uploaded nothing to R2 for 26 hours, although it snapshots daily. Check `fly logs` for litestream errors."),
 ]
 
 
