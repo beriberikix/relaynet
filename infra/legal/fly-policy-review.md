@@ -43,9 +43,9 @@ advice.
 ## Draft note to Fly support
 
 > Hi, I run relaynet (app "relaynet", org "relaynet"), a hosted network
-> relay for virtual machines that run in a browser (e.g. Zephyr/v86 demos).
-> Invited users connect over WebSocket and their VMs make outbound TCP/UDP
-> connections through the app. We block SMTP, private/metadata ranges and
+> relay that gives browser-based clients raw TCP/UDP (e.g. Zephyr/v86 VMs,
+> SSH clients, USB/IP and debug tools). Invited users connect over WebSocket
+> and their clients make outbound TCP/UDP connections through the app. We block SMTP, private/metadata ranges and
 > scanning patterns, rate-limit per account, log destinations for 30 days
 > to handle abuse reports, and require accounts (no anonymous use). Is this
 > use acceptable under your Terms (§1.1/§1.4(d)) and AUP? We use

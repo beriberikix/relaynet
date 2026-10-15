@@ -419,7 +419,7 @@
     try {
       await api("/api/me/redeem", { method: "POST", body: { code: form.elements.code.value.trim() } });
       form.reset();
-      showStatus("Your account is active. Create a token to connect a VM.", false);
+      showStatus("Your account is active. Create a token to connect.", false);
       await loadDashboard();
     } finally {
       button.disabled = false;

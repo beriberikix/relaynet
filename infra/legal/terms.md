@@ -2,8 +2,9 @@
 
 _Effective October 14, 2026._
 
-relaynet ("the service") is a hosted network relay for virtual machines that
-run in a web browser. It is operated by Jonathan Beri ("I", "me"), an
+relaynet ("the service") is a hosted network relay that connects programs,
+such as virtual machines and other software running in a web browser, to
+the internet over a WebSocket. It is operated by Jonathan Beri ("I", "me"), an
 individual based in California, United States. By creating an account or using the
 service you agree to these terms and to the [Acceptable Use Policy](acceptable-use)
 and [Privacy Policy](privacy).

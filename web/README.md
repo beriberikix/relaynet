@@ -32,7 +32,7 @@ Sign-in works locally, but the relay only accepts browser calls from the
 production origin, so the dashboard's data calls return 403 unless
 `http://localhost:5173` is added to `ALLOWED_ORIGINS` for a dev relay.
 
-## Connecting a VM
+## Connecting
 
 ```js
 const ws = new WebSocket("wss://relay.relaynet.network", ["relay.v1", "relay.token." + token]);

@@ -12,7 +12,7 @@ and why. Contact: privacy@relaynet.network.
 - **API tokens**: a one-way hash and short prefix of each token, its name,
   creation, last-use and expiry times. The token itself is never stored.
 - **Usage**: bytes sent and received and number of sessions, per month.
-- **Connection records**: for each connection your virtual machine opens, the
+- **Connection records**: for each connection your sessions open, the
   destination address and port, protocol, whether it was allowed, bytes
   transferred and start and end time. These are kept for **30 days** to
   investigate abuse reports, then deleted.

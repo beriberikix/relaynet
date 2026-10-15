@@ -1,7 +1,13 @@
 # relaynet
 
-Hosted, multi-user network relay for browser VMs at https://relaynet.network
-(relay endpoint `wss://relay.relaynet.network`). The relay process is
+Hosted, multi-user network relay at https://relaynet.network (relay endpoint
+`wss://relay.relaynet.network`). Clients with their own TCP/IP stack (browser
+VMs, or user-space stacks for SSH, USB/IP, debug and custom protocols) send
+Ethernet frames over a WebSocket and get IPv4 TCP and UDP to the internet;
+sessions of one account share a private network. The docs page
+(`web/docs/docs.md`) lists use cases and when to use something else.
+
+The relay process is
 [rootlessRelay](https://github.com/beriberikix/rootlessRelay) in hosted mode,
 pinned as a dependency; this repo holds everything around it.
 

@@ -1,21 +1,26 @@
 # relaynet
 
-> relaynet is a hosted network relay for virtual machines that run in a web
-> page. A VM's network card sends raw Ethernet frames over a WebSocket
-> (subprotocol `relay.v1`, endpoint `wss://relay.relaynet.network/`); the
-> relay answers DHCP and ARP and forwards IPv4 TCP and UDP to the internet.
-> Access needs an API token (invite-only beta).
+> relaynet is a hosted relay that gives web pages and other programs raw IPv4
+> networking: a client with its own TCP/IP stack (a browser VM, or a
+> user-space stack such as lwIP or smoltcp) sends Ethernet frames over a
+> WebSocket (subprotocol `relay.v1`, endpoint `wss://relay.relaynet.network/`);
+> the relay answers DHCP and ARP and forwards TCP and UDP to the internet.
+> Used for browser VMs, SSH clients, USB/IP, debug protocols, KVM consoles and
+> custom or peer-to-peer protocols. Access needs an API token (invite-only beta).
 
 Key facts: each binary WebSocket message is one Ethernet II frame (no FCS);
 the token goes in the subprotocol list as `relay.token.<token>` (browsers)
 or as `Authorization: Bearer <token>`; network `10.0.2.0/24`, gateway
 `10.0.2.2` (MAC `52:54:00:12:34:56`), DNS `8.8.8.8`, MTU 1500; private
-ranges and port 25 are blocked; check a token with
+ranges and port 25 are blocked; sessions of one account share a private
+network; no inbound ports. Not a fit when the user controls the server (use a
+WebSocket or WebTransport), needs browser-to-browser media (WebRTC) or only
+calls HTTP APIs (fetch). Check a token with
 `GET https://relay.relaynet.network/api/me`.
 
 ## Docs
 
-- [Full documentation (Markdown)](https://relaynet.network/docs.md): quick start, connecting from browsers, v86 and Node, API tokens, the relay.v1 protocol, virtual network, DHCP, outbound rules, errors and close codes, limits, account API, troubleshooting
+- [Full documentation (Markdown)](https://relaynet.network/docs.md): use cases and alternatives, quick start, connecting from browsers, v86 and Node, API tokens, the relay.v1 protocol, virtual network, DHCP, outbound rules, errors and close codes, limits, account API, troubleshooting
 - [Full documentation (HTML)](https://relaynet.network/docs)
 
 ## Policies

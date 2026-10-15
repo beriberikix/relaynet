@@ -1,10 +1,11 @@
 # relaynet documentation
 
-relaynet gives a virtual machine that runs in a web page (v86, a Linux or
-Zephyr build compiled to WebAssembly, any emulator with a virtual network
-card) a real network connection. The VM's network card sends Ethernet frames
-over a WebSocket; the relay answers DHCP and ARP, forwards TCP and UDP to the
-public internet, and sends the replies back as Ethernet frames.
+relaynet gives code in a web page, or any program that can open a WebSocket,
+raw IPv4 networking. The client sends Ethernet frames over a WebSocket; the
+relay answers DHCP and ARP, forwards TCP and UDP to the public internet, and
+sends the replies back as Ethernet frames. The client brings its own TCP/IP
+stack: a virtual machine (v86, Linux or Zephyr compiled to WebAssembly), or a
+user-space stack. Sessions of one account also share a private network.
 
 This page is also available as plain Markdown at
 [/docs.md](https://relaynet.network/docs.md), and an index for AI agents is at
@@ -21,13 +22,86 @@ This page is also available as plain Markdown at
 | Network | IPv4 only: `10.0.2.0/24`, gateway `10.0.2.2`, addresses from DHCP |
 | Access | Invite-only beta; sign in at [relaynet.network](https://relaynet.network) and redeem an invite |
 
+## What it is for
+
+Browsers can open HTTP, WebSocket, WebTransport and WebRTC connections, but
+not plain TCP or UDP sockets. relaynet fills that gap for protocols below
+HTTP:
+
+- **Browser VMs and emulators.** The guest's network card is the client. It
+  runs DHCP and then uses the network as on real hardware.
+- **Remote shells.** An SSH client compiled to WebAssembly connects to port
+  22 of any public host. SSH encrypts end to end, so the relay only carries
+  ciphertext.
+- **USB/IP and device sharing.** A page that reads a device through WebUSB
+  serves it over USB/IP (TCP port 3240) to a Linux machine on your account's
+  network (see [Joining your own machines](#joining-your-own-machines)),
+  which attaches it with `usbip attach`. Every USB transfer makes a round
+  trip through the relay, so this suits low-rate devices (serial adapters,
+  security keys, debug probes), not webcams or audio.
+- **Debug protocols.** A web IDE talks to a GDB server, OpenOCD or a vendor
+  debug server over TCP; or a page holding a probe through WebUSB serves the
+  GDB remote protocol to `gdb` on one of your machines.
+- **KVM and consoles.** VNC (RFB), IPMI (UDP 623) and serial-over-TCP
+  consoles of hosts with public addresses. Most KVMs sit on private
+  networks, which relaynet cannot reach directly; you need a machine on that
+  network joined to your account (and then a VPN may be simpler).
+- **Custom, encrypted and peer-to-peer protocols.** TCP and UDP to any public
+  host and port except 25: WireGuard, QUIC, libp2p transports, Noise-based or
+  proprietary protocols, game networking.
+
+### When to use something else
+
+relaynet adds a hop through California and requires an IP stack in the
+client. Prefer another tool when one fits:
+
+| If you need | Use instead | Why |
+|---|---|---|
+| A byte stream to a server you run | A plain WebSocket or WebTransport endpoint | No IP stack in the client, one hop fewer |
+| Browser-to-browser data, audio or video | WebRTC | Peer to peer with NAT traversal and congestion control built for media; lower latency |
+| HTTP APIs | `fetch` | Already in the browser |
+| Your home or office LAN, or inbound connections from the internet | A VPN or tunnel (WireGuard, Tailscale, Cloudflare Tunnel) | relaynet has no inbound ports and blocks private addresses |
+| Bulk transfer or low latency far from California | A server near your users | Sessions are capped at 1 MiB/s, and each TCP connection carries about 64 KiB per round trip |
+| IPv6, ICMP to the internet, multicast, port 25 | Not available here | relaynet is IPv4 TCP and UDP only |
+
+### Bringing your own TCP/IP stack
+
+Every client needs something that turns sockets into Ethernet frames:
+
+- **A virtual machine.** The guest kernel is the stack; connect its virtual
+  network card (see [v86](#v86)).
+- **A user-space stack compiled to WebAssembly**, such as lwIP, smoltcp
+  (Rust) or gVisor's netstack (Go). Feed it the frames from the WebSocket
+  and send the frames it emits; run its DHCP client, or give it a static
+  address (see [DHCP](#dhcp)).
+- **Your own minimal stack.** For a single UDP protocol, building IPv4 and
+  UDP headers by hand is enough; the [minimal client
+  example](#minimal-client-example) shows the format.
+
+### Joining your own machines
+
+All sessions of one account share `10.0.2.0/24` and can reach each other by
+address, while other accounts' sessions are invisible. To put a regular
+computer on that network, run a small bridge on it: a program that opens a
+TAP interface, sends each frame read from it as a WebSocket message, and
+writes each message received back to the interface. relaynet does not ship
+a bridge yet. Give the TAP interface a static address from
+`10.0.2.15`–`10.0.2.254` (for example `ip addr add 10.0.2.200/24 dev tap0`)
+rather than running DHCP on it, so the machine's default route stays on its
+own network. A browser session on the same account can then connect to
+`10.0.2.200` directly, with no inbound port open on the machine.
+
+An account can hold 4 sessions at once, so this suits a few devices, not a
+fleet.
+
 ## Quick start
 
 1. Sign in at [relaynet.network](https://relaynet.network) and redeem your
    invite code.
 2. In the dashboard, under **API tokens**, create a token. It looks like
    `rr_<prefix>_<secret>` and is shown once; copy it.
-3. Open a WebSocket with the token and give it to your VM's network card:
+3. Open a WebSocket with the token and connect it to your VM's network card
+   or your TCP/IP stack:
 
 ```js
 const ws = new WebSocket("wss://relay.relaynet.network/", [
@@ -184,9 +258,9 @@ address for the session, if no other session holds it.
 - **UDP**: each source and destination pair becomes a flow on a real UDP
   socket; replies come back to the VM's source port. DNS is ordinary UDP to
   port 53 of any resolver. DNS over TCP, DoH and DoT also work.
-- **Broadcast and VM-to-VM**: sessions of the same account share the
-  `10.0.2.0/24` network and can reach each other by address. Other accounts'
-  sessions are invisible.
+- **Between your sessions**: sessions of the same account share the
+  `10.0.2.0/24` network and can reach each other by address, including
+  broadcast to `10.0.2.255`. Other accounts' sessions are invisible.
 
 ### Address and identity rules
 
@@ -359,6 +433,10 @@ and returns JSON. Everything is scoped to your own account.
 
 ## Notes for AI agents
 
+- relaynet suits protocols below HTTP for clients with their own TCP/IP
+  stack. If the user controls the server, needs browser-to-browser media or
+  only calls HTTP APIs, suggest the alternatives under [When to use something
+  else](#when-to-use-something-else) instead.
 - Treat this document as the specification for `relay.v1`. The protocol has
   no hidden control channel: binary messages are Ethernet frames, and text
   messages are only `ping:`/`pong:`.

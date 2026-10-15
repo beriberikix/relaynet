@@ -125,7 +125,7 @@ TEMPLATE = """<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Docs · relaynet</title>
-  <meta name="description" content="How to connect a browser VM to relaynet: API tokens, the relay.v1 WebSocket protocol, the virtual network, limits and errors.">
+  <meta name="description" content="How to use relaynet: use cases and alternatives, API tokens, the relay.v1 WebSocket protocol, the virtual network, limits and errors.">
   <link rel="alternate" type="text/markdown" href="/docs.md" title="This page as Markdown">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232563eb'/%3E%3Ccircle cx='16' cy='16' r='5' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
@@ -157,22 +157,27 @@ TEMPLATE = """<!doctype html>
 
 LLMS = """# relaynet
 
-> relaynet is a hosted network relay for virtual machines that run in a web
-> page. A VM's network card sends raw Ethernet frames over a WebSocket
-> (subprotocol `relay.v1`, endpoint `wss://relay.relaynet.network/`); the
-> relay answers DHCP and ARP and forwards IPv4 TCP and UDP to the internet.
-> Access needs an API token (invite-only beta).
+> relaynet is a hosted relay that gives web pages and other programs raw IPv4
+> networking: a client with its own TCP/IP stack (a browser VM, or a
+> user-space stack such as lwIP or smoltcp) sends Ethernet frames over a
+> WebSocket (subprotocol `relay.v1`, endpoint `wss://relay.relaynet.network/`);
+> the relay answers DHCP and ARP and forwards TCP and UDP to the internet.
+> Used for browser VMs, SSH clients, USB/IP, debug protocols, KVM consoles and
+> custom or peer-to-peer protocols. Access needs an API token (invite-only beta).
 
 Key facts: each binary WebSocket message is one Ethernet II frame (no FCS);
 the token goes in the subprotocol list as `relay.token.<token>` (browsers)
 or as `Authorization: Bearer <token>`; network `10.0.2.0/24`, gateway
 `10.0.2.2` (MAC `52:54:00:12:34:56`), DNS `8.8.8.8`, MTU 1500; private
-ranges and port 25 are blocked; check a token with
+ranges and port 25 are blocked; sessions of one account share a private
+network; no inbound ports. Not a fit when the user controls the server (use a
+WebSocket or WebTransport), needs browser-to-browser media (WebRTC) or only
+calls HTTP APIs (fetch). Check a token with
 `GET https://relay.relaynet.network/api/me`.
 
 ## Docs
 
-- [Full documentation (Markdown)](https://relaynet.network/docs.md): quick start, connecting from browsers, v86 and Node, API tokens, the relay.v1 protocol, virtual network, DHCP, outbound rules, errors and close codes, limits, account API, troubleshooting
+- [Full documentation (Markdown)](https://relaynet.network/docs.md): use cases and alternatives, quick start, connecting from browsers, v86 and Node, API tokens, the relay.v1 protocol, virtual network, DHCP, outbound rules, errors and close codes, limits, account API, troubleshooting
 - [Full documentation (HTML)](https://relaynet.network/docs)
 
 ## Policies

@@ -2,8 +2,8 @@
 
 _Effective October 14, 2026._
 
-relaynet gives browser virtual machines a path to the internet through shared
-addresses. This policy keeps those addresses usable for everyone. It applies
+relaynet gives browser virtual machines and other clients a path to the
+internet through shared addresses. This policy keeps those addresses usable for everyone. It applies
 to all traffic sent through your account or its tokens.
 
 ## Not allowed
@@ -24,7 +24,7 @@ to all traffic sent through your account or its tokens.
   the traffic goes, including child sexual abuse material, infringing
   copyrighted works, fraud and harassment.
 - **Attacking relaynet**: trying to reach the relay's internal network or
-  other users' virtual machines, spoofing addresses, or bypassing limits.
+  other users' sessions, spoofing addresses, or bypassing limits.
 
 ## Enforcement
 

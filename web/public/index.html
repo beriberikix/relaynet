@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>relaynet</title>
-  <meta name="description" content="A hosted network relay for browser virtual machines and anything else that speaks the rootlessRelay protocol.">
+  <meta name="description" content="A hosted relay that gives web pages raw TCP, UDP and Ethernet-level networking over a WebSocket: for browser VMs, SSH, USB/IP, debug protocols, KVMs and custom protocols.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232563eb'/%3E%3Ccircle cx='16' cy='16' r='5' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -15,6 +15,7 @@
       relaynet
     </a>
     <nav class="topnav">
+      <a href="#uses" data-landing>Use cases</a>
       <a href="#how" data-landing>How it works</a>
       <a href="#tiers" data-landing>Tiers</a>
       <a href="docs.html">Docs</a>
@@ -30,20 +31,82 @@
     <!-- Landing -->
     <section id="landing">
       <div class="hero">
-        <h1>Give your browser VM a network.</h1>
+        <h1>Raw networking for the browser.</h1>
         <p class="lead">
-          relaynet is a hosted relay for virtual machines that run in a web page. Point the
-          VM's network adapter at a WebSocket and it gets DNS, TCP and UDP to the public internet,
-          with per-account limits and nothing reachable inside the relay's own network.
+          Browsers can speak HTTP, WebSocket and WebRTC, but not plain TCP or UDP. relaynet carries
+          Ethernet frames over a WebSocket, so code in a page that has its own TCP/IP stack
+          (a virtual machine, an emulator, or a user-space stack compiled to WebAssembly)
+          gets DHCP, DNS, TCP and UDP to the public internet. Your sessions also share a private
+          network, so a browser tab can reach a machine you run elsewhere.
         </p>
         <p class="muted">relaynet is in an invite-only beta. Sign in, then redeem your invite code. By signing in you agree to the <a href="terms.html">Terms</a> and <a href="acceptable-use.html">Acceptable Use Policy</a>.</p>
         <div class="hero-actions">
           <button class="btn btn-primary btn-lg" type="button" data-action="login">Sign in</button>
-          <a class="btn btn-lg" href="#how">See how it works</a>
+          <a class="btn btn-lg" href="#uses">See what it is for</a>
         </div>
       </div>
 
-      <div id="how" class="grid three">
+      <h2 id="uses">What it is for</h2>
+      <div class="grid uses">
+        <div class="card">
+          <h3>Browser VMs and emulators</h3>
+          <p>v86, Linux or Zephyr compiled to WebAssembly: the guest runs DHCP and then uses
+            <code>apt</code>, <code>git</code> and <code>curl</code> as usual.</p>
+        </div>
+        <div class="card">
+          <h3>Remote shells</h3>
+          <p>An SSH client in a page connects straight to port 22 of any public host. Encryption is
+            end to end; the relay carries ciphertext and never holds your keys.</p>
+        </div>
+        <div class="card">
+          <h3>USB/IP and device sharing</h3>
+          <p>A page that reads a device through WebUSB serves it over USB/IP, and a Linux machine
+            on your account's network attaches it with <code>usbip</code>. Best for low-bandwidth
+            devices: serial adapters, keys, debug probes.</p>
+        </div>
+        <div class="card">
+          <h3>Debug protocols</h3>
+          <p>Connect a web IDE to a GDB server or OpenOCD, or bridge a probe the browser holds
+            through WebUSB to <code>gdb</code> on another machine of yours.</p>
+        </div>
+        <div class="card">
+          <h3>KVM and consoles</h3>
+          <p>VNC (RFB), IPMI and serial-over-TCP consoles of hosts with public addresses, or of a
+            LAN reached through a machine of yours joined to your account's network.</p>
+        </div>
+        <div class="card">
+          <h3>Custom and peer-to-peer protocols</h3>
+          <p>TCP and UDP to any public port except mail: WireGuard, QUIC, libp2p, Noise-based
+            and game protocols that browsers cannot speak directly.</p>
+        </div>
+      </div>
+
+      <h2 id="fit">Is it the right tool?</h2>
+      <div class="grid two">
+        <div class="card">
+          <h3>A good fit when</h3>
+          <ul class="plain">
+            <li>You need TCP, UDP or whole Ethernet frames to hosts you do not control.</li>
+            <li>Your code already has an IP stack: a VM kernel, or lwIP, smoltcp or gVisor's netstack in WebAssembly.</li>
+            <li>You want encryption to the real endpoint, not a proxy that terminates TLS.</li>
+            <li>Two ends you own should share a small private network without opening inbound ports.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Use something else when</h3>
+          <ul class="plain">
+            <li>You run the server and only need a byte stream: a plain <strong>WebSocket</strong> or <strong>WebTransport</strong> needs no IP stack and saves a hop.</li>
+            <li>Browsers talk to each other, especially audio and video: <strong>WebRTC</strong> is peer to peer and faster; relaynet always relays through California.</li>
+            <li>You call HTTP APIs: use <strong>fetch</strong>.</li>
+            <li>You need your home or office LAN, or inbound connections from the internet: use a <strong>VPN or tunnel</strong> (WireGuard, Tailscale, Cloudflare Tunnel). relaynet has no inbound ports and blocks private addresses.</li>
+            <li>You move bulk data or need low latency far from California: sessions are capped at 1 MiB/s.</li>
+            <li>You need IPv6, ping to the internet, multicast or port 25: not supported.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h2 id="how">How it works</h2>
+      <div class="grid three">
         <div class="card">
           <h3>1. Get a token</h3>
           <p>Sign in with your invite and create an API token from your dashboard.</p>
@@ -54,9 +117,9 @@
             list. Ethernet frames go in, Ethernet frames come out.</p>
         </div>
         <div class="card">
-          <h3>3. Boot the VM</h3>
-          <p>The relay answers DHCP and ARP, forwards TCP and UDP, and resolves DNS. Works with
-            v86, container-in-browser projects, or anything that speaks the protocol.</p>
+          <h3>3. Bring an IP stack</h3>
+          <p>The relay answers DHCP and ARP and forwards TCP and UDP. Plug in a VM's network card,
+            a user-space TCP/IP stack, or a bridge to a TAP device on a machine you run.</p>
         </div>
       </div>
 
@@ -66,7 +129,7 @@
   "relay.v1",
   "relay.token." + token,   // an API token from your dashboard
 ]);
-// hand `ws` to your VM's network adapter</code></pre>
+// hand `ws` to your VM's network card or your TCP/IP stack</code></pre>
         <p class="muted">Browsers cannot set headers on a WebSocket, so the token travels as a subprotocol
           entry. Non-browser clients may send <code>Authorization: Bearer</code> instead.</p>
       </div>
@@ -107,7 +170,7 @@
           <div class="meter" aria-hidden="true"><div id="usage-bar" class="meter-fill"></div></div>
           <p id="usage-text" class="muted"></p>
           <table class="table compact" id="usage-table" hidden>
-            <thead><tr><th>Month</th><th>Received by VMs</th><th>Sent by VMs</th><th>Sessions</th></tr></thead>
+            <thead><tr><th>Month</th><th>Received</th><th>Sent</th><th>Sessions</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -119,9 +182,9 @@
           <h3>Active sessions</h3>
           <button class="btn btn-sm" type="button" data-action="refresh-sessions">Refresh all</button>
         </div>
-        <p id="sessions-empty" class="muted">No sessions right now. Open one from your VM page and it will appear here.</p>
+        <p id="sessions-empty" class="muted">No sessions right now. Connect with one of your tokens and it will appear here.</p>
         <table class="table" id="sessions-table" hidden>
-          <thead><tr><th>Started</th><th>From</th><th>VM address</th><th>Connections</th><th>To VM</th><th>From VM</th><th></th></tr></thead>
+          <thead><tr><th>Started</th><th>Client IP</th><th>Network address</th><th>Connections</th><th>Received</th><th>Sent</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -143,7 +206,7 @@
           </label>
           <button class="btn btn-primary" type="submit">Create token</button>
         </form>
-        <p id="tokens-empty" class="muted">No tokens yet. Create one to connect a VM.</p>
+        <p id="tokens-empty" class="muted">No tokens yet. Create one to connect.</p>
         <table class="table" id="tokens-table" hidden>
           <thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr></thead>
           <tbody></tbody>
