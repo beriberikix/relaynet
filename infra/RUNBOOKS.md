@@ -9,7 +9,9 @@ open http://localhost:8001        # localhost, not 127.0.0.1: the SSO callback h
 
 Sign in with **single sign-on** (Auth0 app `relaynet-admin`, MFA required).
 Operators are accounts with role `operator` whose Auth0 identity matches;
-promote one from Users → **Make operator**. Staging: `fly proxy 8002:8001 -a
+promote one from Users → **Make operator**. Production has password login off
+(`ADMIN_PASSWORD_LOGIN=false`); if Auth0 is down, set it to `true` and create a
+temporary operator over `fly ssh console`, then revert. Staging: `fly proxy 8002:8001 -a
 relaynet-staging` (password login, credentials in `relay/.env.staging.local`).
 
 ## Invite a beta tester
@@ -120,7 +122,8 @@ fly ssh sftp get /data/backup.sqlite ./backup.sqlite -a relaynet
 | Secret | How | Effect |
 |---|---|---|
 | `ADMIN_SESSION_SECRET` | `fly secrets set ADMIN_SESSION_SECRET=$(openssl rand -hex 32)` | Operators are logged out of the panel |
-| Operator password | Panel → Users → your account → **Password** | None |
+| Operator password (staging only) | Panel → Users → your account → **Password** | None |
+| `ADMIN_OIDC_CLIENT_SECRET` | Auth0 → Applications → relaynet-admin → rotate secret, then `fly secrets set ADMIN_OIDC_CLIENT_SECRET=...` | Sign-ins fail between the two steps |
 | `ADMIN_BOOTSTRAP_*` | `fly secrets unset ADMIN_BOOTSTRAP_USERNAME ADMIN_BOOTSTRAP_PASSWORD` once an operator exists | None; they are only read when no operator exists |
 | Auth0 signing keys | Auth0 dashboard → Settings → Signing Keys → rotate | Relay picks up the new key from the JWKS URL; existing sessions keep working until their tokens expire |
 | A user's API token | Dashboard or panel → **Revoke** | Clients using it are refused on their next connection |
