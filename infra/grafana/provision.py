@@ -110,8 +110,8 @@ def rule(name, expr, op, threshold, pending, severity, summary):
 # out-of-memory kill or a host failure, not a deploy. On a deploy or a
 # `fly machine restart`, Fly sends SIGINT and the relay logs
 # {"msg":"shutting down",...,"code":0}; a crash logs code 1 or nothing.
-# fly-log-shipper wraps each line in Fly's JSON envelope, so the relay's
-# quotes arrive escaped (\"code\":0); the regex matches either form.
+# fly-log-shipper re-serializes the relay's JSON with sorted keys ("code"
+# before "msg") and may add spaces, so the two are matched separately.
 UNEXPECTED_RESTART = {
     "uid": "relaynet-relay-restarted",  # same uid as the old "Relay restarted" rule, replaced in place
     "title": "Relay restarted unexpectedly",
@@ -129,7 +129,7 @@ UNEXPECTED_RESTART = {
             "relativeTimeRange": {"from": 900, "to": 0},
             "datasourceUid": "{loki}",
             "model": {"refId": "B", "queryType": "instant", "intervalMs": 1000, "maxDataPoints": 43200,
-                      "expr": 'sum(count_over_time({fly_app_name="relaynet"} |~ `shutting down.*code\\W{1,4}0\\b` [15m])) or vector(0)'},
+                      "expr": 'sum(count_over_time({fly_app_name="relaynet"} |= `shutting down` |~ `"code\\W{1,4}0\\b` [15m])) or vector(0)'},
         },
         {
             "refId": "C",
@@ -152,8 +152,10 @@ UNEXPECTED_RESTART = {
 
 def loki_uid():
     status, sources = api("GET", "/api/datasources")
+    # Grafana Cloud stacks also carry alert-state-history and usage-insights
+    # Loki data sources; the application logs are the one ending in "-logs".
     for source in sources if isinstance(sources, list) else []:
-        if source.get("type") == "loki":
+        if source.get("type") == "loki" and source["uid"].endswith("-logs"):
             return source["uid"]
     raise SystemExit("no Loki data source found")
 
