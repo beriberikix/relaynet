@@ -62,6 +62,8 @@ kill_timeout = 15
   # Fly's metrics scraper reads /metrics over the private network without auth.
   METRICS_ENABLED = "true"
   METRICS_PUBLIC = "true"
+  # Fly scrapes only one [[metrics]] endpoint, so the relay appends Litestream's.
+  METRICS_MERGE_URLS = "http://127.0.0.1:9090/metrics"
 
   # Litestream target: R2 bucket and prefix.
   LITESTREAM_BUCKET = "relaynet-backups"
@@ -95,11 +97,6 @@ kill_timeout = 15
 
 [[metrics]]
   port = 8001
-  path = "/metrics"
-
-[[metrics]]
-  # Litestream replication metrics.
-  port = 9090
   path = "/metrics"
 
 [[vm]]
