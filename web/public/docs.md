@@ -183,6 +183,118 @@ const ws = new WebSocket("wss://relay.relaynet.network/", ["relay.v1"], {
 });
 ```
 
+## When a session drops
+
+A session is one WebSocket. When it closes, for any reason, the relay ends
+the session: its TCP connections to the internet are closed and its UDP
+flows dropped. The page, the VM or stack in it, and any WebUSB device the
+page holds are untouched, so recovering is a matter of reconnecting and
+restarting what depended on the old session.
+
+### What ends a session
+
+| Cause | What happens |
+|---|---|
+| The tab is in the background | Usually nothing: the browser answers the relay's pings itself. Browsers throttle timers in hidden tabs (Chrome to about once a minute after five minutes), so a VM or stack in the page runs slowly and its peers may time out. |
+| The tab is frozen or discarded (memory saving, a mobile browser in the background) | A frozen page runs no JavaScript. The session may stay open with frames for the page piling up, or end when the browser stops answering pings. A discarded page reloads from scratch. |
+| The computer sleeps, or the network changes | The socket dies, often without a close event in the page until it next sends. The relay closes the session after about 60 s. |
+| A relay deploy | Close code `1001`; reconnect after a few seconds. |
+| 12 hours, or 30 minutes without frames | Close code `1000`, `session expired` or `idle timeout`. |
+| A revoked token, a suspended account, an exhausted quota | Close code `1008`. Reconnecting will not work. |
+
+### What a reconnect gets back
+
+- **The address, for 60 seconds.** When a session closes, the relay holds
+  its address for your account for 60 s. A client that reconnects in that
+  time gets the same address back by running DHCP with the same MAC, or by
+  sending from it. Other accounts cannot take it. If the old session still
+  looks open (after a sleep or a network change the relay takes up to a
+  minute to notice) and has sent nothing for 5 s, the new session takes over
+  its MAC and address and the old one is closed.
+- **Connections between your sessions.** Traffic between sessions of one
+  account, such as USB/IP between a page and a machine running
+  relaynet-bridge, passes as plain IP between the two TCP/IP stacks; the
+  relay keeps no state for it. If the address comes back, those connections
+  survive a gap shorter than the stacks' own TCP timeouts.
+- **Not connections to the internet.** The relay terminates those, so they
+  end with the session. After a reconnect, the relay answers any segment of
+  such a connection with a TCP reset, so the stack fails it at once instead
+  of retransmitting for minutes; the application then reconnects as it would
+  after any network error.
+
+### The client helper
+
+[relaynet.js](https://relaynet.network/relaynet.js) is a small,
+dependency-free ES module that owns the WebSocket and passes frames through
+to your stack unchanged. It sends a heartbeat (`ping:`) to notice a dead
+socket, checks the session as soon as the page becomes visible, comes back
+online or wakes from sleep, reconnects with backoff, stops on `1008`,
+closes the socket when the page is left (browsers can keep it open for a
+page in the back/forward cache) and reconnects if it comes back, and drops
+frames instead of queueing them while disconnected (TCP retransmits;
+stale frames only confuse the stack). It works in browsers and in Node 22+.
+
+```js
+import { connectRelay } from "https://relaynet.network/relaynet.js";
+
+const relay = connectRelay({
+  token,
+  onFrame: (frame) => stack.receiveFrame(frame),  // Uint8Array, relay -> stack
+  onOpen: ({ reconnect }) => {
+    if (reconnect) restartWhatNeedsTheNetwork();  // a new session (see below)
+  },
+  onStateChange: (state) => showStatus(state),    // connecting, open, waiting, closed
+  onClose: ({ code, reason, final }) => {
+    if (final) showError(reason);                 // e.g. "token revoked"
+  },
+});
+stack.onFrame = (frame) => relay.send(frame);     // stack -> relay; false if dropped
+// relay.close() ends the session and stops reconnecting.
+```
+
+Options include `url`, `heartbeatMs` (20 s), `heartbeatTimeoutMs` (10 s),
+`maxBackoffMs` (60 s) and `WebSocket` (a constructor, for Node libraries such
+as `ws`). Browsers hide why an upgrade was refused, so after a failed
+connection the helper asks `GET /api/me` once whether the token is still
+valid. Pages on other sites cannot read that answer (CORS) and keep
+retrying with backoff; pass `checkToken: false` to skip the request.
+Import from the URL above, or copy the file into your project to pin a
+version.
+
+With v86, leave out `relay_url` and connect the network card through the
+helper instead of the WebSocket wrapper in [v86](#v86):
+
+```js
+const emulator = new V86({ /* ... */ net_device: { type: "virtio" } });
+const relay = connectRelay({
+  token,
+  onFrame: (frame) => emulator.bus.send("net0-receive", frame),
+});
+emulator.add_listener("net0-send", (frame) => relay.send(frame));
+```
+
+### Recovering well
+
+- **Keep the MAC.** VMs keep theirs. A user-space stack should pick a MAC
+  once and reuse it (for example from `localStorage`), so DHCP after a
+  reconnect returns the same address. Do not use one MAC in two pages at
+  once: each would take over the other's session whenever it goes quiet.
+- **Restart what used the old session** in `onOpen({ reconnect: true })`:
+  open new connections to the internet, and re-run anything that could not
+  survive (for example `usbip attach` on the Linux side if its connection
+  was reset). A stack that runs DHCP itself needs nothing else.
+- **Renew the lease after a long gap.** A VM guest keeps its address for the
+  lease time (3600 s). If it was away for more than 60 s and another session
+  took the address, the guest's packets are dropped until it renews; restart
+  its DHCP client.
+- **Show the state.** Tell the user when the page is reconnecting or has
+  stopped, instead of letting connections fail silently.
+- **Keep long device sessions visible.** A USB/IP or debug server in a
+  hidden, throttled tab answers slowly enough for the other side to time
+  out. Give it its own window and keep that window uncovered. A page keeps
+  its WebUSB device claimed across reconnects; the device's own `disconnect`
+  event (`navigator.usb`) is unrelated to the network.
+
 ## API tokens
 
 - Create and revoke tokens in the dashboard. Creating or revoking needs a
@@ -228,7 +340,7 @@ and a JSON body such as `{"error":"invalid-token"}` and closes the connection
 |---|---|---|
 | Client to relay | binary | One Ethernet II frame from the VM: destination MAC, source MAC, EtherType, payload. No preamble, no FCS. At most 65,549 bytes. |
 | Relay to client | binary | One Ethernet II frame for the VM, same format. |
-| Client to relay | text | `ping:<anything>`: the relay answers `pong:<anything>`. Optional; useful for measuring latency. Other text messages are ignored. |
+| Client to relay | text | `ping:<anything>`: the relay answers `pong:<anything>`. Optional; useful for measuring latency and as a heartbeat. It does not count as activity for the idle timeout. Other text messages are ignored. |
 
 There is no other framing, no handshake inside the WebSocket and no
 per-message metadata. Messages are delivered in order. Frames are never
@@ -243,7 +355,7 @@ merged or split: one VM frame is one WebSocket message.
 | VM addresses | `10.0.2.15` to `10.0.2.254`, one per session, from DHCP |
 | DNS server offered | `8.8.8.8` (the VM may use any public resolver) |
 | MTU | 1500 (DHCP option 26) |
-| Lease time | 3600 s; leases end when the session closes |
+| Lease time | 3600 s; when the session closes, the address is held for the account for 60 s (see [When a session drops](#when-a-session-drops)) |
 | Protocols | ARP and IPv4. IPv6 and other EtherTypes are dropped. |
 
 ### DHCP
@@ -303,10 +415,16 @@ address for the session, if no other session holds it.
 - The relay sends a WebSocket ping every 30 seconds; browsers and most
   libraries answer automatically. A session that misses two pings in a row is
   closed.
-- A session with no messages from the client for 30 minutes is closed
-  (`1000`, `idle timeout`). VM traffic counts; the relay's pings do not.
+- A session with no frames from the client for 30 minutes is closed
+  (`1000`, `idle timeout`). Only Ethernet frames count; `ping:` messages and
+  the relay's pings do not.
 - A session lasts at most 12 hours (`1000`, `session expired`). Reconnect to
-  continue; DHCP gives the VM a new lease.
+  continue; DHCP with the same MAC gives the VM its address back.
+- The browser, not the page, answers the relay's pings, so a session can
+  outlive the JavaScript that uses it. In the other direction, a page may
+  not notice a dead socket until it sends; a `ping:` heartbeat finds out
+  sooner. See [When a session
+  drops](#when-a-session-drops).
 
 ### Errors
 
@@ -339,7 +457,8 @@ After the handshake, the relay closes sessions with these codes:
 | 1008 | `terminated by operator` | Closed by the relaynet operator. |
 
 Reconnect with exponential backoff (for example 1, 2, 4 … 60 seconds), and do
-not retry on 401 or 403.
+not retry on 401 or 403 or after `1008`. The [client
+helper](#the-client-helper) does this.
 
 ### Minimal client example
 
@@ -443,6 +562,13 @@ and returns JSON. Everything is scoped to your own account.
   trip to the relay in California (roughly 250 KB/s at 250 ms), up to the
   1 MiB/s session limit. Use parallel connections for large transfers.
 - **Mail does not send.** Port 25 is blocked; use 587 or 465.
+- **Connections hang after the computer wakes or the network changes.** The
+  socket died and the page has not noticed. Use a `ping:` heartbeat (the
+  [client helper](#the-client-helper) has one) and reconnect when it goes
+  unanswered.
+- **After a reconnect the VM has no network.** If it was away for more than
+  60 s, another session may have its address; restart the guest's DHCP
+  client.
 
 ## Notes for AI agents
 
@@ -457,6 +583,9 @@ and returns JSON. Everything is scoped to your own account.
   public pages; read it from an environment variable or user input.
 - When a connection fails, call `GET /api/me` with the token to tell an
   authentication problem from a network problem before changing code.
+- For browser clients, use the [client helper](#the-client-helper) for the
+  WebSocket instead of writing reconnect logic, and restart what depended on
+  the old session in `onOpen({ reconnect: true })`.
 - Respect the limits above; back off on 429 and 503, and do not retry on 401
   or 403.
 

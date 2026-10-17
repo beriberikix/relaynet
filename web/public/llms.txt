@@ -20,7 +20,8 @@ calls HTTP APIs (fetch). Check a token with
 
 ## Docs
 
-- [Full documentation (Markdown)](https://relaynet.network/docs.md): use cases and alternatives, quick start, connecting from browsers, v86 and Node, API tokens, the relay.v1 protocol, virtual network, DHCP, outbound rules, errors and close codes, limits, account API, troubleshooting
+- [Full documentation (Markdown)](https://relaynet.network/docs.md): use cases and alternatives, quick start, connecting from browsers, v86 and Node, sessions that drop (sleeping tabs, network changes, reconnecting), API tokens, the relay.v1 protocol, virtual network, DHCP, outbound rules, errors and close codes, limits, account API, troubleshooting
+- [Client helper](https://relaynet.network/relaynet.js): a dependency-free ES module that owns the WebSocket and handles heartbeat, reconnect with backoff and close codes; frames pass through to your TCP/IP stack
 - [Full documentation (HTML)](https://relaynet.network/docs)
 
 ## Policies

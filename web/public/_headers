@@ -14,3 +14,7 @@
 
 /llms.txt
   Content-Type: text/plain; charset=utf-8
+
+/relaynet.js
+  Access-Control-Allow-Origin: *
+  Content-Type: text/javascript; charset=utf-8
