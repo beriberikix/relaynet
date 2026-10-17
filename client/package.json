@@ -1,8 +1,20 @@
 {
-  "name": "relaynet-client",
+  "name": "@relaynet/client",
   "version": "0.1.0",
-  "private": true,
-  "description": "Reconnecting WebSocket transport for the relaynet relay.v1 protocol",
+  "description": "Reconnecting WebSocket transport for relaynet: heartbeat, backoff and session recovery for browser VMs and user-space TCP/IP stacks",
+  "keywords": [
+    "relaynet",
+    "websocket",
+    "ethernet",
+    "v86",
+    "webusb",
+    "usbip",
+    "networking",
+    "reconnect"
+  ],
+  "homepage": "https://relaynet.network/docs#when-a-session-drops",
+  "license": "MIT",
+  "author": "beriberikix",
   "type": "module",
   "main": "relaynet.js",
   "exports": "./relaynet.js",
@@ -12,9 +24,11 @@
   "engines": {
     "node": ">=22"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "node --test relaynet.test.js",
     "test:e2e": "RUN_NETWORK_TESTS=1 node --test relaynet.e2e.test.js"
-  },
-  "license": "MIT"
+  }
 }

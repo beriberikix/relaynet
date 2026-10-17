@@ -224,8 +224,8 @@ restarting what depended on the old session.
 
 ### The client helper
 
-[relaynet.js](https://relaynet.network/relaynet.js) is a small,
-dependency-free ES module that owns the WebSocket and passes frames through
+[@relaynet/client](https://www.npmjs.com/package/@relaynet/client) is a
+small, dependency-free ES module that owns the WebSocket and passes frames through
 to your stack unchanged. It sends a heartbeat (`ping:`) to notice a dead
 socket, checks the session as soon as the page becomes visible, comes back
 online or wakes from sleep, reconnects with backoff, stops on `1008`,
@@ -234,8 +234,14 @@ page in the back/forward cache) and reconnects if it comes back, and drops
 frames instead of queueing them while disconnected (TCP retransmits;
 stale frames only confuse the stack). It works in browsers and in Node 22+.
 
+```sh
+npm install @relaynet/client
+```
+
 ```js
-import { connectRelay } from "https://relaynet.network/relaynet.js";
+import { connectRelay } from "@relaynet/client";
+// Without a build step, pin a version on a CDN:
+// import { connectRelay } from "https://cdn.jsdelivr.net/npm/@relaynet/client@0.1/relaynet.js";
 
 const relay = connectRelay({
   token,
@@ -258,8 +264,6 @@ as `ws`). Browsers hide why an upgrade was refused, so after a failed
 connection the helper asks `GET /api/me` once whether the token is still
 valid. Pages on other sites cannot read that answer (CORS) and keep
 retrying with backoff; pass `checkToken: false` to skip the request.
-Import from the URL above, or copy the file into your project to pin a
-version.
 
 With v86, leave out `relay_url` and connect the network card through the
 helper instead of the WebSocket wrapper in [v86](#v86):

@@ -2,9 +2,8 @@
 """Build the public docs from docs.md (the single source).
 
 Writes web/public/docs.html (the page, with a contents sidebar),
-web/public/docs.md (the Markdown as is, for agents and copy-paste),
-web/public/llms.txt (an index for AI agents, https://llmstxt.org) and
-web/public/relaynet.js (a copy of the client helper in client/).
+web/public/docs.md (the Markdown as is, for agents and copy-paste)
+and web/public/llms.txt (an index for AI agents, https://llmstxt.org).
 
 Handles the Markdown subset docs.md uses: #/##/### headings, paragraphs,
 "- " and "1. " lists (with indented continuation lines), pipe tables, fenced
@@ -20,7 +19,6 @@ import re
 HERE = pathlib.Path(__file__).parent
 OUT = HERE.parent / "public"
 SOURCE = (HERE / "docs.md").read_text()
-CLIENT = HERE.parent.parent / "client" / "relaynet.js"
 
 
 def slug(text):
@@ -180,7 +178,7 @@ calls HTTP APIs (fetch). Check a token with
 ## Docs
 
 - [Full documentation (Markdown)](https://relaynet.network/docs.md): use cases and alternatives, quick start, connecting from browsers, v86 and Node, sessions that drop (sleeping tabs, network changes, reconnecting), API tokens, the relay.v1 protocol, virtual network, DHCP, outbound rules, errors and close codes, limits, account API, troubleshooting
-- [Client helper](https://relaynet.network/relaynet.js): a dependency-free ES module that owns the WebSocket and handles heartbeat, reconnect with backoff and close codes; frames pass through to your TCP/IP stack
+- [Client helper (@relaynet/client on npm)](https://www.npmjs.com/package/@relaynet/client): a dependency-free ES module that owns the WebSocket and handles heartbeat, reconnect with backoff and close codes; frames pass through to your TCP/IP stack
 - [Full documentation (HTML)](https://relaynet.network/docs)
 
 ## Policies
@@ -198,6 +196,5 @@ toc_html = "\n".join(
 (OUT / "docs.html").write_text(TEMPLATE.format(body=body, toc=toc_html))
 (OUT / "docs.md").write_text(SOURCE)
 (OUT / "llms.txt").write_text(LLMS)
-(OUT / "relaynet.js").write_text(CLIENT.read_text())
-for name in ("docs.html", "docs.md", "llms.txt", "relaynet.js"):
+for name in ("docs.html", "docs.md", "llms.txt"):
     print("wrote", OUT / name)

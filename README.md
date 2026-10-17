@@ -14,7 +14,7 @@ pinned as a dependency; this repo holds everything around it.
 ```
 relay/   container image + Fly.io config for the relay process
 web/     browser frontend (Cloudflare Worker, static assets)
-client/  relaynet.js, the reconnecting client helper served from the site
+client/  relaynet.js, the reconnecting client helper (npm: @relaynet/client)
 infra/   setup notes for Cloudflare, Auth0 and operator access
 ```
 
