@@ -224,7 +224,7 @@ restarting what depended on the old session.
 
 ### The client helper
 
-[@relaynet/client](https://www.npmjs.com/package/@relaynet/client) is a
+The [relaynet npm package](https://www.npmjs.com/package/relaynet) is a
 small, dependency-free ES module that owns the WebSocket and passes frames through
 to your stack unchanged. It sends a heartbeat (`ping:`) to notice a dead
 socket, checks the session as soon as the page becomes visible, comes back
@@ -235,13 +235,13 @@ frames instead of queueing them while disconnected (TCP retransmits;
 stale frames only confuse the stack). It works in browsers and in Node 22+.
 
 ```sh
-npm install @relaynet/client
+npm install relaynet
 ```
 
 ```js
-import { connectRelay } from "@relaynet/client";
+import { connectRelay } from "relaynet";
 // Without a build step, pin a version on a CDN:
-// import { connectRelay } from "https://cdn.jsdelivr.net/npm/@relaynet/client@0.1/relaynet.js";
+// import { connectRelay } from "https://cdn.jsdelivr.net/npm/relaynet@0.1/relaynet.js";
 
 const relay = connectRelay({
   token,

@@ -1,4 +1,4 @@
-# @relaynet/client
+# relaynet
 
 A reconnecting WebSocket transport for [relaynet](https://relaynet.network)'s
 `relay.v1` protocol: one dependency-free ES module for browsers and Node 22+.
@@ -22,19 +22,19 @@ lifecycle:
 ## Install
 
 ```sh
-npm install @relaynet/client
+npm install relaynet
 ```
 
 Pages without a build step can import it from a CDN, pinned to a version:
 
 ```js
-import { connectRelay } from "https://cdn.jsdelivr.net/npm/@relaynet/client@0.1/relaynet.js";
+import { connectRelay } from "https://cdn.jsdelivr.net/npm/relaynet@0.1/relaynet.js";
 ```
 
 ## Use
 
 ```js
-import { connectRelay } from "@relaynet/client";
+import { connectRelay } from "relaynet";
 
 const relay = connectRelay({
   token,                                            // an API token from relaynet.network

@@ -1,5 +1,5 @@
 {
-  "name": "@relaynet/client",
+  "name": "relaynet",
   "version": "0.1.0",
   "description": "Reconnecting WebSocket transport for relaynet: heartbeat, backoff and session recovery for browser VMs and user-space TCP/IP stacks",
   "keywords": [
@@ -23,9 +23,6 @@
   ],
   "engines": {
     "node": ">=22"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "test": "node --test relaynet.test.js",
