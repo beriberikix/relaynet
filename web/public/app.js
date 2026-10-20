@@ -309,10 +309,18 @@
     clear(tbody);
     $("#sessions-empty").hidden = sessions.length > 0;
     table.hidden = sessions.length === 0;
+    // "Opened by" only matters when someone else's sessions are in the list.
+    table.classList.toggle("hide-opened-by", !sessions.some((s) => s.own === false));
     for (const s of sessions) {
-      const kill = el("button", { class: "btn btn-sm btn-danger", type: "button", "data-action": "kill-session", "data-id": s.sessionId }, "Close");
+      // The relay says whether this caller may close the session; a relay that
+      // predates the field sends nothing, and the button stays as it was.
+      const kill = s.canClose === false
+        ? ""
+        : el("button", { class: "btn btn-sm btn-danger", type: "button", "data-action": "kill-session", "data-id": s.sessionId }, "Close");
+      const who = s.username ? (s.own ? `${s.username} (you)` : s.username) : "";
       tbody.append(el("tr", null, [
         el("td", { title: fmtDate(s.startedAt) }, fmtAgo(s.startedAt)),
+        el("td", { class: "col-opened" }, who),
         el("td", null, s.clientIP || ""),
         el("td", null, s.vmIP || "no address yet"),
         el("td", null, `${s.tcpConnections} TCP, ${s.udpFlows} UDP`),
