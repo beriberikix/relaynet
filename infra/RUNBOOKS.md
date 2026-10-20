@@ -93,6 +93,38 @@ days with a daily snapshot. Fly also snapshots the volume daily (14 days).
   litestream errors (R2 credentials, bucket, disk) and run the restore
   check; a disk-full pause needs `fly volumes extend`.
 
+## Rehearse migrations before a release
+
+Do this whenever a relay release adds schema migrations (the organization
+release adds two), before it touches staging or production. It proves the
+release's migrations work on a copy of the real data; it changes nothing in
+production.
+
+1. In the fork (`beriberikix/rootlessRelay`), merge the change, then tag a
+   release, for example `v0.7.0-hosted.1`.
+2. Run the rehearsal, which restores the production replica from R2 with the
+   read-only key and runs `scripts/check-migration.js` on it:
+
+   ```sh
+   gh workflow run migration-rehearsal.yml -f ref=v0.7.0-hosted.1
+   gh run watch
+   ```
+
+   The summary lists each check with counts only. Any `FAIL` means do not
+   deploy: fix the migration, retag, run it again. A restore failure is the
+   backup problem in "Restore the database" below.
+3. Bump the tarball tag in `relay/package.json` and `npm install` in `relay/`
+   (see "Updating the relay" in `relay/README.md`).
+4. Deploy to staging first (`fly deploy -c fly.staging.toml --ha=false`), open
+   a session with a token, and check `GET /api/me` shows `org`.
+5. Deploy to production. The migrations run on boot, before the relay serves,
+   inside one transaction each. Litestream replicates the migrated database.
+6. Roll back by deploying the previous tag. It still starts on the migrated
+   database: it ignores the new tables, usage it records goes to the old
+   `usage_monthly`, and accounts and tokens it creates get their org on first
+   use by the new release. If the volume itself is damaged, see "Restore the
+   database".
+
 ## Restore the database
 
 **Volume lost or machine replaced** (most likely case): nothing to do. On
