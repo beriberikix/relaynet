@@ -64,8 +64,35 @@ By hand, if Actions is unavailable: `fly deploy --ha=false` from `relay/`
 (staging: `fly deploy -c fly.staging.toml --ha=false`).
 
 Roll back with `fly releases -a relaynet` and
-`fly deploy --ha=false --image <previous image>`. A migration cannot be rolled
-back by an older image; restore the pre-deploy backup instead.
+`fly deploy --ha=false --image <previous image>`. Migrations are not undone
+by an older image. Releases before the organizations release (v0.7.0-hosted.1)
+can only be rolled back by restoring the pre-deploy backup; the
+organizations release itself can also be rolled back by image, see below.
+
+### Rolling back the organizations release
+
+Migrations 4 and 5 only add tables and columns, so the previous release
+(`v0.6.0-hosted.12`) still starts on a migrated database. Checked by running
+that tag against a database the new release had migrated: accounts, tokens
+created by either release, usage recording, tier changes and account deletion
+all work, and the new release reopens the file afterwards with no foreign key
+violations. What to expect while the old image runs:
+
+- Usage goes to the old per-user `usage_monthly`, not `org_usage_monthly`, so
+  the new release's monthly totals and quota check miss that window. Bytes
+  recorded are not lost; they sit in the old table.
+- Accounts and tokens it creates have no org; the new release gives them one
+  on first use.
+- An account it deletes leaves an empty org and its usage row behind (it does
+  not know about them). Harmless; to clean up after returning to the new
+  release:
+  `DELETE FROM orgs WHERE id NOT IN (SELECT org_id FROM memberships);`
+  and `DELETE FROM org_usage_monthly WHERE org_id NOT IN (SELECT id FROM orgs);`
+- Org invitations, shared orgs and member roles are not visible to it.
+
+Prefer restoring the pre-deploy backup (see "Restore the database") if the
+volume itself is damaged, or if shared orgs already exist and must not be
+ignored. Restoring loses everything written since the backup.
 
 The Fly deploy tokens in Actions secrets (`FLY_DEPLOY_TOKEN_*`) expire on
 2027-10-14; renew with `fly tokens create deploy -a <app> -x 8760h`.
@@ -119,11 +146,8 @@ production.
    a session with a token, and check `GET /api/me` shows `org`.
 5. Deploy to production. The migrations run on boot, before the relay serves,
    inside one transaction each. Litestream replicates the migrated database.
-6. Roll back by deploying the previous tag. It still starts on the migrated
-   database: it ignores the new tables, usage it records goes to the old
-   `usage_monthly`, and accounts and tokens it creates get their org on first
-   use by the new release. If the volume itself is damaged, see "Restore the
-   database".
+6. Roll back: see "Rolling back the organizations release" under "Deploy the
+   relay".
 
 ## Restore the database
 
