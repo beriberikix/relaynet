@@ -1,6 +1,6 @@
 # Design: organizations, teams and roles
 
-Status: decisions agreed; ready to break into issues. Issue: #29 (epic #28). Decides #30.
+Status: implemented and in production (fork release v0.7.0-hosted.2, 2026-10-20), except teams (phase 2, #106). Issue: #29 (epic #28). Decides #30.
 
 Code references are to the hosted-mode fork (`beriberikix/rootlessRelay`) at
 the pinned tag `v0.6.0-hosted.12`. The work lands in the fork; this repo only
@@ -315,3 +315,26 @@ admin port, SSO unchanged).
 ## Open questions
 
 None blocking.
+
+## Implementation notes
+
+What shipped, and where it differs from the plan above.
+
+- **Usage** moved to a new `org_usage_monthly` table (see Migration); the old
+  table is untouched for rollback.
+- **Audit attribution** (`connections_audit.user_id`, migration 5, #108) was
+  added so a connection in a shared org traces to one member. Earlier rows are
+  attributed only where unambiguous.
+- **Org selection** is `X-Relay-Org` (HTTP) or a `relay.org.<id>` subprotocol
+  entry; an API token stays bound to its org (`token-org-mismatch`).
+- **Verified email** on JWT identities needs `JWT_VERIFIED_CLAIM` (and the Auth0
+  action to emit the claim, infra/README.md). Until it is set, org invitations
+  answer `email-not-verified`.
+- **Invitations** are email-bound, single-use, 7 days, token shown once and
+  stored hashed; re-inviting an address replaces its open invitation.
+- **Operator panel** gained an Orgs tab (#105): list, create, tier, suspend,
+  delete, members, tokens, invitations.
+- **Not built:** teams (#106) and the dashboard screens and org switcher
+  (#65, #63).
+- **Rollback** of this release by image is supported; the observed behaviour
+  is in `infra/RUNBOOKS.md`.
