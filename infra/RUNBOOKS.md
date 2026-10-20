@@ -14,6 +14,40 @@ promote one from Users → **Make operator**. Production has password login off
 temporary operator over `fly ssh console`, then revert. Staging: `fly proxy 8002:8001 -a
 relaynet-staging` (password login, credentials in `relay/.env.staging.local`).
 
+## Reach the staging panel
+
+Staging stops when idle (`auto_stop_machines`) and starts on the first request
+to the public hostname. The admin proxy does **not** count as traffic, so a
+proxy to a sleeping machine fails with "has no started VMs". Wake it first:
+
+```sh
+curl -s https://relay-staging.relaynet.network/healthz     # wakes it, a few seconds
+fly proxy 8002:8001 -a relaynet-staging &                  # keep it running
+open http://localhost:8002
+```
+
+Sign in with the staging operator password (`relay/.env.staging.local`, which
+is gitignored and lives only on the machine you set staging up from). If you
+do not have it, make a temporary operator inside the machine, then remove it.
+Run both within a minute or two of waking the machine, or it may sleep again:
+
+```sh
+umask 077; openssl rand -base64 24 | tr -d '/+=' | cut -c1-24 > /tmp/stg-pw   # keep this file private
+B64=$(base64 -w0 infra/staging/tmp-operator.js)
+fly ssh console -a relaynet-staging -u node -q -C \
+  "sh -c 'echo $B64 | base64 -d > /tmp/op.js && ACTION=create PW=$(cat /tmp/stg-pw) node /tmp/op.js; rc=\$?; rm -f /tmp/op.js; exit \$rc'"
+# sign in as tmp-operator with the password in /tmp/stg-pw, do what you need, then:
+fly ssh console -a relaynet-staging -u node -q -C \
+  "sh -c 'echo $B64 | base64 -d > /tmp/op.js && ACTION=remove node /tmp/op.js; rc=\$?; rm -f /tmp/op.js; exit \$rc'"
+rm -f /tmp/stg-pw
+```
+
+The panel cannot delete the operator you are signed in as, hence the second
+command. Run as `-u node` so the SQLite files stay owned by the relay user.
+Tested against a scratch database (create, duplicate refused, password
+verifies, remove also deletes the operator's personal org) and on staging on
+2026-10-20. Do not use this on production: its panel signs in through SSO.
+
 ## Invite a beta tester
 
 1. Panel → **Invites** → note who it is for, keep the 14-day expiry → **Create invite**.
