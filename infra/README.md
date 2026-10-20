@@ -28,6 +28,33 @@ The issuer must include the trailing slash exactly as Auth0 emits it. The
 frontend requests tokens with `audience: "https://relay.relaynet.network"`
 and passes the **access token** (not the ID token) to the relay.
 
+### Verified email claim (needed for org invitations, #32/#34)
+
+The relay only matches an org invitation to an address the identity provider
+has verified. The `add-email-claim` action therefore also copies
+`event.user.email_verified` into the access token:
+
+```js
+exports.onExecutePostLogin = async (event, api) => {
+  api.accessToken.setCustomClaim("https://relaynet/email", event.user.email);
+  api.accessToken.setCustomClaim("https://relaynet/email_verified", event.user.email_verified === true);
+};
+```
+
+Roll out in this order. Setting the relay secret first would stop unverified
+addresses (everyone, until the action emits the claim) from being used as
+usernames for new sign-ups.
+
+1. Update and deploy the `add-email-claim` action (Auth0 dashboard or
+   `auth0 actions update` / `auth0 actions deploy`). Existing sessions keep
+   working; new access tokens carry the claim.
+2. Check a fresh access token for `https://relaynet/email_verified: true`.
+3. Deploy a relay release that includes the org routes
+   (rootlessRelay `orgs-api`), then
+   `fly secrets set JWT_VERIFIED_CLAIM="https://relaynet/email_verified"`.
+
+Roll back by unsetting the secret; the claim is harmless to leave in tokens.
+
 Users signing in through Auth0 are created in the relay on first connection
 with the `user` tier. Operators can change tiers or ban them from the panel.
 
