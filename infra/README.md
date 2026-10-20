@@ -49,9 +49,14 @@ usernames for new sign-ups.
    `auth0 actions update` / `auth0 actions deploy`). Existing sessions keep
    working; new access tokens carry the claim.
 2. Check a fresh access token for `https://relaynet/email_verified: true`.
-3. Deploy a relay release that includes the org routes
-   (rootlessRelay `orgs-api`), then
-   `fly secrets set JWT_VERIFIED_CLAIM="https://relaynet/email_verified"`.
+3. Set the secret on production (the relay release with the org routes,
+   `v0.7.0-hosted.2`, has been deployed since 2026-10-20):
+   `fly secrets set -a relaynet JWT_VERIFIED_CLAIM="https://relaynet/email_verified"`.
+   Setting a secret restarts the relay and closes live sessions. Staging has
+   no Auth0 login (`externalJwt` is off there), so there is nothing to set.
+4. Check: sign in at https://relaynet.network, then
+   `GET /api/me` with that access token should show your `org`; an org invitation
+   sent to your address should accept instead of answering `email-not-verified`.
 
 Roll back by unsetting the secret; the claim is harmless to leave in tokens.
 
