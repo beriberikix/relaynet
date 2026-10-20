@@ -1,0 +1,66 @@
+name: migration rehearsal
+
+# Run by hand before deploying a relay release that adds schema migrations.
+# Restores the production replica from R2 (read-only key, same as the weekly
+# restore check), then runs the release's migrations on that copy and checks
+# what must survive. Nothing is written back to R2 or to the Fly volume. The
+# restored database lives only on the runner and is discarded with it; the
+# summary has counts only.
+#
+#   gh workflow run migration-rehearsal.yml -f ref=<tag or branch of the fork>
+#
+# The ref must contain scripts/check-migration.js.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag or branch of beriberikix/rootlessRelay to rehearse"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  LITESTREAM_VERSION: "0.5.17"
+  LITESTREAM_SHA256: cfb371176d164437ae869f8351cfde49bd1804ae71c61923f75c9cba9c9c006d
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Litestream
+        run: |
+          curl -fsSL -o /tmp/litestream.tar.gz \
+            "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-${LITESTREAM_VERSION}-linux-x86_64.tar.gz"
+          echo "${LITESTREAM_SHA256}  /tmp/litestream.tar.gz" | sha256sum -c -
+          sudo tar -xzf /tmp/litestream.tar.gz -C /usr/local/bin litestream
+      - name: Restore production from R2
+        env:
+          LITESTREAM_ACCESS_KEY_ID: ${{ secrets.R2_RO_ACCESS_KEY_ID }}
+          LITESTREAM_SECRET_ACCESS_KEY: ${{ secrets.R2_RO_SECRET_ACCESS_KEY }}
+          LITESTREAM_BUCKET: relaynet-backups
+          LITESTREAM_REPLICA_PATH: prod
+          ADMIN_AUTH_DB_PATH: /data/relay.sqlite
+        run: |
+          litestream restore -config relay/litestream.yml -integrity-check full \
+            -o "$RUNNER_TEMP/restored.sqlite" /data/relay.sqlite
+      - name: Check out the release under test
+        uses: actions/checkout@v4
+        with:
+          repository: beriberikix/rootlessRelay
+          ref: ${{ inputs.ref }}
+          path: rootlessRelay
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install the release's dependencies
+        working-directory: rootlessRelay
+        run: npm ci --ignore-scripts=false
+      - name: Rehearse the migrations on the copy
+        working-directory: rootlessRelay
+        run: |
+          node scripts/check-migration.js "$RUNNER_TEMP/restored.sqlite" | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "${PIPESTATUS[0]}"
