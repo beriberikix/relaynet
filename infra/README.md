@@ -12,7 +12,7 @@ Done on 2026-10-14 with the Auth0 CLI (`auth0 apis create`, `auth0 apps create`,
 | Tenant | `jonathanberi.us.auth0.com` |
 | API (token audience) | `relaynet`, identifier `https://relay.relaynet.network`, RS256, 1 h tokens |
 | SPA application | `relaynet-web`; callbacks, logout and web origins `https://relaynet.network` and `http://localhost:5173` |
-| Post-login action | `add-email-claim`: copies `event.user.email` into the access token as `https://relaynet/email` |
+| Post-login actions | `add-email-claim` (version 2 deployed 2026-10-14): copies `event.user.email` and `event.user.email_verified === true` into the access token as `https://relaynet/email` and `https://relaynet/email_verified`. `require-mfa-admin`: MFA for the operator panel app. Both are bound to the post-login flow. |
 
 Relay secrets set on Fly:
 
@@ -21,44 +21,82 @@ fly secrets set \
   JWT_ISSUER="https://jonathanberi.us.auth0.com/" \
   JWT_AUDIENCE="https://relay.relaynet.network" \
   JWT_JWKS_URL="https://jonathanberi.us.auth0.com/.well-known/jwks.json" \
-  JWT_USERNAME_CLAIM="https://relaynet/email"
+  JWT_USERNAME_CLAIM="https://relaynet/email" \
+  JWT_VERIFIED_CLAIM="https://relaynet/email_verified"
 ```
+
+`JWT_VERIFIED_CLAIM` is set on production. Fly shows only a digest, so the value
+cannot be read back; see "Checking the verified-email claim" below.
 
 The issuer must include the trailing slash exactly as Auth0 emits it. The
 frontend requests tokens with `audience: "https://relay.relaynet.network"`
 and passes the **access token** (not the ID token) to the relay.
 
-### Verified email claim (needed for org invitations, #32/#34)
+### Verified email claim (org invitations)
 
-The relay only matches an org invitation to an address the identity provider
-has verified. The `add-email-claim` action therefore also copies
-`event.user.email_verified` into the access token:
+The relay matches an org invitation only to an address the identity provider
+has verified. Two things make that work, and both are in place:
 
-```js
-exports.onExecutePostLogin = async (event, api) => {
-  api.accessToken.setCustomClaim("https://relaynet/email", event.user.email);
-  api.accessToken.setCustomClaim("https://relaynet/email_verified", event.user.email_verified === true);
-};
-```
+- the `add-email-claim` action emits `https://relaynet/email_verified`
+  (`event.user.email_verified === true`), deployed as version 2 on 2026-10-14;
+- the relay secret `JWT_VERIFIED_CLAIM` names that claim. With it set, an
+  address the provider has not verified is not used as a username for a new
+  account (it falls back to the Auth0 id) and cannot accept an invitation.
 
-Roll out in this order. Setting the relay secret first would stop unverified
-addresses (everyone, until the action emits the claim) from being used as
-usernames for new sign-ups.
+Staging has no Auth0 login (`externalJwt` is off), so neither applies there.
 
-1. Update and deploy the `add-email-claim` action (Auth0 dashboard or
-   `auth0 actions update` / `auth0 actions deploy`). Existing sessions keep
-   working; new access tokens carry the claim.
-2. Check a fresh access token for `https://relaynet/email_verified: true`.
-3. Set the secret on production (the relay release with the org routes,
-   `v0.7.0-hosted.2`, has been deployed since 2026-10-20):
-   `fly secrets set -a relaynet JWT_VERIFIED_CLAIM="https://relaynet/email_verified"`.
-   Setting a secret restarts the relay and closes live sessions. Staging has
-   no Auth0 login (`externalJwt` is off there), so there is nothing to set.
-4. Check: sign in at https://relaynet.network, then
-   `GET /api/me` with that access token should show your `org`; an org invitation
-   sent to your address should accept instead of answering `email-not-verified`.
+#### Checking the verified-email claim
 
-Roll back by unsetting the secret; the claim is harmless to leave in tokens.
+There are two halves to check, and they need different methods. Verified
+end to end in production on 2026-10-20.
+
+1. **The token carries the claim** (the Auth0 half). Sign in at
+   https://relaynet.network, then in the browser console **on that page**
+   (the token cache is per origin, so this fails with "undefined is not valid
+   JSON" anywhere else, for example on the panel at `localhost:8001`). It only
+   decodes locally and sends nothing:
+   ```js
+   const k = Object.keys(localStorage).find(k => k.startsWith('@@auth0spajs@@') && k.includes('relay.relaynet.network'));
+   JSON.parse(atob(JSON.parse(localStorage[k]).body.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))
+   ```
+   It should contain `"https://relaynet/email_verified": true`.
+2. **The relay's secret names that claim** (the Fly half). Fly shows only a
+   digest of a secret, and it is not a plain truncated SHA-256, so the value
+   cannot be read back or recomputed. Do not infer it from usernames: the relay
+   assigns a username at an account's first sign-in only, so an email-shaped
+   username says nothing about the secret if the account predates it. Instead
+   set the secret again to the intended value and compare digests:
+   ```sh
+   fly secrets list -a relaynet | grep JWT_VERIFIED_CLAIM        # note the digest
+   fly secrets set -a relaynet JWT_VERIFIED_CLAIM="https://relaynet/email_verified"
+   fly secrets list -a relaynet | grep JWT_VERIFIED_CLAIM        # same digest = same value
+   ```
+   Observed 2026-10-20: re-setting the identical value left the digest
+   unchanged (`dea4aec59b9e8ca5`). Setting a secret restarts the relay and
+   closes live sessions.
+3. **End to end.** In the operator panel create a shared org whose owner is
+   **not you** (use the probe account; if you own it, accepting answers
+   `already-member`), then on https://relaynet.network, signed in, with `ORG`
+   set to the new org's id:
+   ```js
+   const ORG = 0;
+   const API = 'https://relay.relaynet.network';
+   const k = Object.keys(localStorage).find(k => k.startsWith('@@auth0spajs@@') && k.includes('relay.relaynet.network'));
+   const t = JSON.parse(localStorage[k]).body.access_token;
+   const claims = JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+   const H = { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' };
+   const inv = await (await fetch(`${API}/api/orgs/${ORG}/invites`, { method: 'POST', headers: H, body: JSON.stringify({ email: claims['https://relaynet/email'], role: 'member' }) })).json();
+   console.log('accept:', await (await fetch(`${API}/api/invites/accept`, { method: 'POST', headers: H, body: JSON.stringify({ token: inv.token }) })).json());
+   ```
+   Success is `accept: {orgId, role: "member"}`. `email-not-verified` means
+   the claim is missing or the secret does not match; a 404 on the invite means
+   the org id does not exist (the relay answers the same for a missing org and
+   one you cannot see). Delete the test org from the panel afterwards.
+
+To change the claim name, change it in the action and in
+`fly secrets set -a relaynet JWT_VERIFIED_CLAIM=...` together; setting the
+secret restarts the relay. Unsetting the secret is the rollback; the claim is
+harmless to leave in tokens.
 
 Users signing in through Auth0 are created in the relay on first connection
 with the `user` tier. Operators can change tiers or ban them from the panel.
