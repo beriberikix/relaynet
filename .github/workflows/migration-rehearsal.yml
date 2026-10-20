@@ -58,7 +58,7 @@ jobs:
           node-version: "24"
       - name: Install the release's dependencies
         working-directory: rootlessRelay
-        run: npm ci --ignore-scripts=false
+        run: npm ci
       - name: Rehearse the migrations on the copy
         working-directory: rootlessRelay
         run: |
