@@ -118,7 +118,12 @@ CREATE TABLE team_members (
 
 ALTER TABLE users      ADD COLUMN default_org_id INTEGER REFERENCES orgs(id);
 ALTER TABLE api_tokens ADD COLUMN org_id INTEGER REFERENCES orgs(id);
-ALTER TABLE usage_monthly ... -- see Migration: needs a rebuild to change the key
+CREATE TABLE org_usage_monthly (  -- replaces usage_monthly; the old table stays for rollback
+  org_id INTEGER NOT NULL, month TEXT NOT NULL,
+  bytes_in INTEGER NOT NULL DEFAULT 0, bytes_out INTEGER NOT NULL DEFAULT 0,
+  sessions INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (org_id, month)
+);
 ```
 
 Owner is not inheritable: orgs cannot be left without an owner (see
@@ -225,9 +230,10 @@ Runs in the existing migration framework, inside one transaction.
    `tier = users.tier`) and an `owner` membership; set `default_org_id`.
    Operators get one too.
 3. `api_tokens.org_id` = the owner's personal org.
-4. `usage_monthly` is rebuilt with key `(org_id, month)` (the same
-   table-rebuild pattern as migration 2, foreign keys off). `user_id` is kept
-   as a column. For migrated rows `org_id` is the user's personal org.
+4. Usage moves to a new table, `org_usage_monthly` keyed by `(org_id, month)`,
+   backfilled from `usage_monthly` through each user's personal org. The old
+   table is not rebuilt: the previous release's `ON CONFLICT(user_id, month)`
+   upsert needs its key, so rebuilding would break rollback.
 5. `connections_audit` is not rewritten. Old rows keep `owner = "user:<id>"`;
    new rows use `org:<id>`. Audit lookups by org search both forms for orgs
    that were migrated (keeps the abuse-lookup tool working across the cut).
@@ -237,9 +243,10 @@ Idempotent, rehearsed on a restored copy of the production database
 (`fly.staging.toml`), then production.
 
 Rollback: deploy the previous tag. The old code ignores the new tables and
-columns and keeps working from `user_id`. Usage written by the new version in
-between is keyed by org and does not appear to the old one; acceptable for a
-short window, and the rollout note says so.
+columns and keeps working from `user_id`; usage it records lands in the old
+`usage_monthly` and does not appear to the new version. Users and tokens the
+old release creates have no org; the new release gives them one on first use
+(tested).
 
 Live-session cutover: `owner` changes shape, so address holds and the
 in-memory registry (both in-process) reset on the deploy restart that happens
@@ -255,6 +262,11 @@ anyway. No extra step.
 - Otherwise the membership is removed and the user is deleted.
 
 ## Operator panel
+
+Audit rows are keyed by org, so a connection can no longer be attributed to a
+specific member of a shared org. Personal orgs have one member, so nothing is
+lost yet; record the user on audit rows before shared orgs ship (tracked as an
+issue under #28).
 
 Add an Orgs view: list, tier, suspend/unsuspend, members, tokens. The
 existing per-user tier control moves to the org. No new auth surface (private
