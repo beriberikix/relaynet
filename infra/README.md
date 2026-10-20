@@ -47,23 +47,51 @@ Staging has no Auth0 login (`externalJwt` is off), so neither applies there.
 
 #### Checking the verified-email claim
 
-Fly shows only a digest of a secret, so confirm the claim name by behaviour:
+There are two halves to check, and they need different methods. Verified
+end to end in production on 2026-10-20.
 
-1. In the production panel (Users), an account that signed in with a verified
-   address shows that address as its username. If it shows
-   `https://jonathanberi.us.auth0.com/|auth0|...`, the relay is not seeing the
-   verified claim: check the secret's value and the action version.
-2. Sign in at https://relaynet.network and decode your access token locally
-   (browser console on that page; nothing is sent anywhere):
+1. **The token carries the claim** (the Auth0 half). Sign in at
+   https://relaynet.network, then in the browser console **on that page**
+   (the token cache is per origin, so this fails with "undefined is not valid
+   JSON" anywhere else, for example on the panel at `localhost:8001`). It only
+   decodes locally and sends nothing:
    ```js
    const k = Object.keys(localStorage).find(k => k.startsWith('@@auth0spajs@@') && k.includes('relay.relaynet.network'));
    JSON.parse(atob(JSON.parse(localStorage[k]).body.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))
    ```
    It should contain `"https://relaynet/email_verified": true`.
-3. End to end: in the panel, create a shared org, invite your own address
-   (`POST /api/orgs/:id/invites`), and accept it while signed in. Accepting
-   answers `{orgId, role}`; `email-not-verified` means the claim is missing or
-   the secret does not match.
+2. **The relay's secret names that claim** (the Fly half). Fly shows only a
+   digest of a secret, and it is not a plain truncated SHA-256, so the value
+   cannot be read back or recomputed. Do not infer it from usernames: the relay
+   assigns a username at an account's first sign-in only, so an email-shaped
+   username says nothing about the secret if the account predates it. Instead
+   set the secret again to the intended value and compare digests:
+   ```sh
+   fly secrets list -a relaynet | grep JWT_VERIFIED_CLAIM        # note the digest
+   fly secrets set -a relaynet JWT_VERIFIED_CLAIM="https://relaynet/email_verified"
+   fly secrets list -a relaynet | grep JWT_VERIFIED_CLAIM        # same digest = same value
+   ```
+   Observed 2026-10-20: re-setting the identical value left the digest
+   unchanged (`dea4aec59b9e8ca5`). Setting a secret restarts the relay and
+   closes live sessions.
+3. **End to end.** In the operator panel create a shared org whose owner is
+   **not you** (use the probe account; if you own it, accepting answers
+   `already-member`), then on https://relaynet.network, signed in, with `ORG`
+   set to the new org's id:
+   ```js
+   const ORG = 0;
+   const API = 'https://relay.relaynet.network';
+   const k = Object.keys(localStorage).find(k => k.startsWith('@@auth0spajs@@') && k.includes('relay.relaynet.network'));
+   const t = JSON.parse(localStorage[k]).body.access_token;
+   const claims = JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+   const H = { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' };
+   const inv = await (await fetch(`${API}/api/orgs/${ORG}/invites`, { method: 'POST', headers: H, body: JSON.stringify({ email: claims['https://relaynet/email'], role: 'member' }) })).json();
+   console.log('accept:', await (await fetch(`${API}/api/invites/accept`, { method: 'POST', headers: H, body: JSON.stringify({ token: inv.token }) })).json());
+   ```
+   Success is `accept: {orgId, role: "member"}`. `email-not-verified` means
+   the claim is missing or the secret does not match; a 404 on the invite means
+   the org id does not exist (the relay answers the same for a missing org and
+   one you cannot see). Delete the test org from the panel afterwards.
 
 To change the claim name, change it in the action and in
 `fly secrets set -a relaynet JWT_VERIFIED_CLAIM=...` together; setting the
