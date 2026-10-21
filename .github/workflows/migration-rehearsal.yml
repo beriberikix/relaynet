@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install Litestream
         run: |
           curl -fsSL -o /tmp/litestream.tar.gz \
@@ -48,12 +48,12 @@ jobs:
           litestream restore -config relay/litestream.yml -integrity-check full \
             -o "$RUNNER_TEMP/restored.sqlite" /data/relay.sqlite
       - name: Check out the release under test
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: beriberikix/rootlessRelay
           ref: ${{ inputs.ref }}
           path: rootlessRelay
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "24"
       - name: Install the release's dependencies
