@@ -161,6 +161,27 @@
           <a href="mailto:support@relaynet.network">support@relaynet.network</a>.</p>
       </div>
 
+      <div class="card" id="card-org" hidden>
+        <div class="card-head">
+          <h3>Organization</h3>
+          <label class="org-switch" id="org-switch-label" hidden>Acting in
+            <select id="org-switch" aria-label="Organization"></select>
+          </label>
+        </div>
+        <p id="org-summary" class="muted"></p>
+        <p id="org-notice" class="notice" hidden></p>
+        <details class="role-help">
+          <summary>What can each role do?</summary>
+          <ul class="plain">
+            <li><strong>Owner</strong>: everything, including inviting owners and removing members.</li>
+            <li><strong>Admin</strong>: invite and remove members, change roles (not owners), close any session, rename.</li>
+            <li><strong>Member</strong>: connect, create their own tokens, close their own sessions.</li>
+            <li><strong>Billing</strong>: usage and billing only. Cannot connect.</li>
+            <li><strong>Read-only</strong>: see the organization, members, sessions and usage. Cannot connect.</li>
+          </ul>
+        </details>
+      </div>
+
       <div class="grid two">
         <div class="card" id="card-account">
           <h3>Account</h3>
@@ -178,22 +199,71 @@
       </div>
 
       <div id="active-only">
-      <div class="card">
+      <div class="card" id="card-members" hidden>
+        <div class="card-head">
+          <h3>Members</h3>
+          <button class="btn btn-sm btn-danger" type="button" id="btn-leave-org" data-action="leave-org" hidden>Leave organization</button>
+        </div>
+        <p id="members-note" class="muted" hidden></p>
+        <div class="table-wrap">
+          <table class="table" id="members-table" hidden>
+            <thead><tr><th>Member</th><th>Role</th><th>Joined</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" id="card-invites" hidden>
+        <div class="card-head">
+          <h3>Invitations</h3>
+        </div>
+        <form id="org-invite-form" class="inline-form">
+          <label>Email <input name="email" type="email" maxlength="254" placeholder="colleague@example.com" autocomplete="off" required></label>
+          <label>Role
+            <select name="role">
+              <option value="member" selected>member</option>
+              <option value="admin">admin</option>
+              <option value="billing">billing</option>
+              <option value="read_only">read-only</option>
+            </select>
+          </label>
+          <button class="btn btn-primary" type="submit">Create invitation</button>
+        </form>
+        <div id="invite-reveal" class="notice" hidden>
+          <p><strong>Send this link to the person you invited.</strong> It is shown once and works only for
+            the address you entered, for 7 days. relaynet does not send email.</p>
+          <div class="token-row">
+            <code id="invite-link" class="token"></code>
+            <button class="btn btn-sm" type="button" data-action="copy-invite">Copy</button>
+            <button class="btn btn-sm" type="button" data-action="dismiss-invite">Done</button>
+          </div>
+        </div>
+        <p id="org-invites-empty" class="muted">No invitations yet.</p>
+        <div class="table-wrap">
+          <table class="table" id="org-invites-table" hidden>
+            <thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Expires</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" id="card-sessions">
         <div class="card-head">
           <h3>Active sessions</h3>
           <button class="btn btn-sm" type="button" data-action="refresh-sessions">Refresh all</button>
         </div>
         <p id="sessions-empty" class="muted">No sessions right now. Connect with one of your tokens and it will appear here.</p>
         <table class="table" id="sessions-table" hidden>
-          <thead><tr><th>Started</th><th>Client IP</th><th>Network address</th><th>Connections</th><th>Received</th><th>Sent</th><th></th></tr></thead>
+          <thead><tr><th>Started</th><th class="col-opened">Opened by</th><th>Client IP</th><th>Network address</th><th>Connections</th><th>Received</th><th>Sent</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
 
-      <div class="card">
+      <div class="card" id="card-tokens">
         <div class="card-head">
           <h3>API tokens</h3>
         </div>
+        <p id="tokens-note" class="muted"></p>
         <form id="token-form" class="inline-form">
           <label>Name <input name="name" type="text" maxlength="64" placeholder="laptop" required></label>
           <label>Expires

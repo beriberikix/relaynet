@@ -191,6 +191,17 @@ ul.plain li:last-child { border-bottom: 0; }
 
 /* Overlay, so showing or clearing a message never shifts the page under the
    pointer (a button that moves between two clicks is a misclick). */
+.org-switch { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--muted); }
+.org-switch select, .table select {
+  font: inherit; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text);
+}
+.hide-opened-by .col-opened { display: none; }
+.notice { border: 1px solid var(--border); border-left: 3px solid var(--accent); background: var(--code-bg); border-radius: 6px; padding: 10px 12px; margin: 10px 0; }
+.role-help { margin-top: 10px; color: var(--muted); font-size: 0.92rem; }
+.role-help summary { cursor: pointer; }
+.role-help ul { margin: 8px 0 0; }
+
 .status {
   position: fixed;
   top: 76px;
