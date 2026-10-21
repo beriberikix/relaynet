@@ -1,6 +1,6 @@
 {
   "name": "relaynet",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reconnecting WebSocket transport for relaynet: heartbeat, backoff and session recovery for browser VMs and user-space TCP/IP stacks",
   "keywords": [
     "relaynet",
