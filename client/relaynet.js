@@ -210,7 +210,8 @@ export class RelayConnection {
   // The socket ended: decide whether and when to reconnect.
   closed(opened, code, reason) {
     this.stopHeartbeat();
-    if (opened && Date.now() - this.openedAt >= STABLE_SESSION_MS) this.failures = 0;
+    const stable = opened && Date.now() - this.openedAt >= STABLE_SESSION_MS;
+    if (stable) this.failures = 0;
     if (!opened) {
       // Browsers hide the HTTP status of a refused upgrade (1006). Ask the
       // account API once per streak whether the token is the problem.
@@ -231,10 +232,11 @@ export class RelayConnection {
     const verdict = classifyClose(code, reason);
     if (verdict === "final") {
       this.finish({ code, reason });
-    } else if (verdict === "restart") {
-      this.failures = 0;
+    } else if (verdict === "restart" && stable) {
       this.retryIn(code === 1001 ? Math.round(RESTART_DELAY_MS * (0.5 + Math.random())) : 0, { code, reason });
     } else {
+      // A drop, or a restart notice right after opening: from the second in a
+      // row, back off, so a relay that keeps closing at once is not hammered.
       this.failures += 1;
       this.retryIn(this.failures === 1 ? 0 : this.backoff(), { code, reason });
     }

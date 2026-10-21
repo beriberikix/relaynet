@@ -9,7 +9,8 @@ lifecycle:
 - a `ping:` heartbeat that notices a dead socket, and an immediate check
   when the page becomes visible, comes back online or wakes from sleep
 - reconnecting with jittered backoff (1, 2, 4 … 60 s), at once after a drop
-  and within seconds after a relay deploy (`1001`)
+  and within seconds after a relay deploy (`1001`); a relay that closes
+  sessions right after they open gets backoff, not a reconnect loop
 - stopping on final closes (`1008`: revoked token, suspended account,
   quota; `idle timeout`), and, where the page may call it, asking
   `GET /api/me` whether a refused upgrade was the token's fault

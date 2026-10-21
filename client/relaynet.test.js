@@ -114,14 +114,35 @@ test("a revoked token or exhausted quota ends the connection for good", (t) => {
 test("a relay restart reconnects within seconds and reports a reconnect", (t) => {
   const { relay, events } = setup(t);
   latest().accept();
+  mock.timers.tick(15000);
   latest().drop(1001, "server shutting down");
   assert.equal(relay.state, "waiting");
-  assert.ok(events.closes[0].retryInMs <= 3000);
+  assert.ok(events.closes[0].retryInMs > 0 && events.closes[0].retryInMs <= 3000);
   mock.timers.tick(3000);
   assert.equal(FakeWebSocket.instances.length, 2);
   latest().accept();
   assert.deepEqual(events.opens.at(-1), { reconnect: true });
   assert.equal(relay.stats.reconnects, 1);
+});
+
+test("a restart notice right after opening backs off instead of looping", (t) => {
+  const { events } = setup(t);
+  const delays = [];
+  for (let i = 0; i < 5; i += 1) {
+    latest().accept();
+    latest().drop(1000, "session expired");
+    const delay = events.closes.at(-1).retryInMs;
+    delays.push(delay);
+    mock.timers.tick(delay);
+  }
+  assert.deepEqual(delays, [0, 2000, 4000, 8000, 16000]);
+  assert.equal(FakeWebSocket.instances.length, 6);
+
+  // After a session that lasted, an expiry reconnects at once again.
+  latest().accept();
+  mock.timers.tick(15000);
+  latest().drop(1000, "session expired");
+  assert.equal(events.closes.at(-1).retryInMs, 0);
 });
 
 test("a dropped session retries at once, then refused attempts back off up to the cap", (t) => {
