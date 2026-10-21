@@ -63,7 +63,7 @@ client. Prefer another tool when one fits:
 | HTTP APIs | `fetch` | Already in the browser |
 | Your home or office LAN, or inbound connections from the internet | A VPN or tunnel (WireGuard, Tailscale, Cloudflare Tunnel) | relaynet has no inbound ports and blocks private addresses |
 | Bulk transfer or low latency far from California | A server near your users | Sessions are capped at 1 MiB/s, and each TCP connection carries about 64 KiB per round trip |
-| IPv6, ICMP to the internet, multicast, port 25 | Not available here | relaynet is IPv4 TCP and UDP only |
+| IPv6, ICMP to the internet, multicast, port 25, UDP discovery and reflector services (SSDP, mDNS, SNMP, memcached) | Not available here | relaynet is IPv4 TCP and UDP only |
 
 ### Bringing your own TCP/IP stack
 
@@ -408,6 +408,11 @@ address for the session, if no other session holds it.
   sessions on `10.0.2.0/24`.
 - Blocked port: 25 (SMTP), TCP and UDP. Use your mail provider's submission
   port 587 or 465.
+- Blocked UDP ports: services that answer a small request with a much larger
+  reply, which nothing in a VM needs on the internet: 17 (QOTD), 19
+  (chargen), 111 (portmapper), 137 (NetBIOS), 161 (SNMP), 389 (CLDAP), 520
+  (RIP), 1900 (SSDP), 3283, 3702 (WS-Discovery), 5353 (mDNS), 10001 and 11211
+  (memcached). DNS (53) and NTP (123) work.
 - A refused TCP connection gets an immediate RST (`connection refused`), not
   a timeout. Refused UDP is dropped silently.
 - A TCP connection the destination does not answer within 15 seconds is reset.
@@ -521,7 +526,7 @@ Beta accounts have these limits. They are per account unless noted.
 | UDP flows | 256 per session |
 | DNS queries | 100 per second per session |
 | Session length | 12 hours; 30 minutes idle |
-| Blocked ports | 25 |
+| Blocked ports | 25; UDP reflector services (see [Outbound rules](#outbound-rules)) |
 
 Traffic over a limit is slowed down or dropped rather than causing an error:
 TCP slows down, excess SYNs and UDP packets are dropped, and the VM's own
