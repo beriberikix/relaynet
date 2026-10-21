@@ -102,7 +102,7 @@
     "invite-email-mismatch": "This invitation was sent to a different email address than the one you signed in with.",
     "email-not-verified": "Your email address isn't verified with the sign-in provider, so the invitation can't be accepted. Verify it, sign in again and open the link again.",
     "already-member": "You are already a member of that organization.",
-    "account-pending": "Your account isn't active yet. Redeem your beta invite code, then open the invitation link again.",
+    "account-pending": "Your account isn't active yet. Redeem your beta invite code, then reload this page to join.",
     "sole-owner": "You are the only owner of an organization that has other members. Make someone else an owner, or delete the organization first.",
     "org-suspended": "This organization is suspended. Contact the operator.",
     "role-cannot-open-sessions": "Your role in this organization can't connect.",
@@ -159,6 +159,8 @@
       storeSet(INVITE_KEY, token, window.sessionStorage);
     }
   }
+
+  const hasInvite = () => Boolean(pendingInvite || storeGet(INVITE_KEY, window.sessionStorage));
 
   // Returns the invitation token once; it is single-use, so it is forgotten
   // whatever happens next.
@@ -742,6 +744,8 @@
       form.reset();
       showStatus("Your account is active. Create a token to connect.", false);
       await loadDashboard();
+      const invite = takeInvite();
+      if (invite) await acceptInvite(invite);
     } finally {
       button.disabled = false;
     }
@@ -773,6 +777,14 @@
       return;
     }
     await loadDashboard();
+    if (me.user.status === "pending") {
+      // Keep the invitation for after activation instead of spending it on a
+      // refusal; the redeem form and a reload both pick it up.
+      if (hasInvite()) {
+        showStatus("You have been invited to an organization, but your account isn't active yet. Enter a beta invite code below, or ask the operator to activate your account and reload this page. The invitation is kept for you.", false, true);
+      }
+      return;
+    }
     const invite = takeInvite();
     if (invite) await acceptInvite(invite);
   })();
