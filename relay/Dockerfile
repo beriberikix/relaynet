@@ -1,4 +1,6 @@
-FROM node:24-bookworm-slim
+# Debian 13 (trixie): the sqlite3 6.x prebuilt binary needs glibc 2.38 or
+# newer, and bookworm has 2.36.
+FROM node:24-trixie-slim
 
 # Litestream replicates the SQLite database to R2 (see litestream.yml).
 # Pinned and checksum-verified; bump both lines together.
