@@ -7,6 +7,11 @@ updates:
     directory: /relay
     schedule:
       interval: weekly
+    # Stay on the Node LTS line; move majors deliberately (odd majors never
+    # become LTS).
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /web
     schedule:
