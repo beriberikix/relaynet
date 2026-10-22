@@ -18,9 +18,11 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # The relay is pulled as a pinned release tarball (see package.json), so no
-# git is needed in the image. sqlite3 uses a prebuilt binary for Node 24.
+# git is needed in the image. No dependency's install script runs except
+# sqlite3's, which fetches its prebuilt native binary.
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts \
+ && npm rebuild sqlite3
 
 COPY litestream.yml /etc/litestream.yml
 COPY entrypoint.sh /app/entrypoint.sh
