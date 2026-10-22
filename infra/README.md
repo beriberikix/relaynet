@@ -53,7 +53,7 @@ end to end in production on 2026-10-20.
 1. **The token carries the claim** (the Auth0 half). Sign in at
    https://relaynet.network, then in the browser console **on that page**
    (the token cache is per origin, so this fails with "undefined is not valid
-   JSON" anywhere else, for example on the panel at `localhost:8001`). It only
+   JSON" anywhere else, for example on the panel at `admin.relaynet.network`). It only
    decodes locally and sends nothing:
    ```js
    const k = Object.keys(localStorage).find(k => k.startsWith('@@auth0spajs@@') && k.includes('relay.relaynet.network'));
