@@ -123,8 +123,16 @@ and the `/api/anon/token` rate-limit rule were deleted).
 
 ## Operator access
 
-The admin port is private. `fly proxy 8001:8001` from an authenticated Fly
-session is the only path in. There is no public admin URL by design.
+The panel is at https://admin.relaynet.network: the relay's public listener
+serves the admin app for that hostname only (`ADMIN_PUBLIC_HOST`), and relay
+sessions are refused there. Sign-in is Auth0 SSO with MFA (password login
+off). Writes need the panel's `X-Requested-With` header and a same-origin
+`Origin`; other hostnames get 421; the page has a strict CSP and cannot be
+framed. `/metrics` on the public name needs a sign-in; the scraper reads it on
+the private admin port 8001, which stays off the internet. DNS: like
+`relay`, `admin` is a proxied CNAME to `8wyq65k.relaynet.fly.dev`, with
+`_acme-challenge.admin` (CNAME, DNS-only) and `_fly-ownership.admin` (TXT)
+for the Fly certificate. Staging's panel stays private (`fly proxy 8002:8001`).
 
 ## Monitoring and alerting
 

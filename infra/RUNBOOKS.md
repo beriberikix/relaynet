@@ -1,11 +1,7 @@
 # relaynet runbooks
 
-All operator actions go through the private admin panel:
-
-```sh
-fly proxy 8001:8001 -a relaynet
-open http://localhost:8001        # localhost, not 127.0.0.1: the SSO callback host
-```
+All operator actions go through the admin panel at
+**https://admin.relaynet.network**.
 
 Sign in with **single sign-on** (Auth0 app `relaynet-admin`, MFA required).
 Operators are accounts with role `operator` whose Auth0 identity matches;
