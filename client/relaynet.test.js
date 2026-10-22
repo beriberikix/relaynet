@@ -306,3 +306,25 @@ test("leaving the page closes the socket; coming back from the back/forward cach
   latest().accept();
   assert.deepEqual(events.opens.at(-1), { reconnect: true });
 });
+
+test("a token is never sent over plain ws:// except to loopback", () => {
+  const open = (url) => new RelayConnection({ token: "rr_test_secret", url, WebSocket: FakeWebSocket, checkToken: false, window: null });
+  assert.throws(() => open("ws://relay.example.net/"), /refusing to send a token over ws:\/\/ to relay\.example\.net/);
+  for (const url of ["ws://localhost:8086/", "ws://127.0.0.1:8086/", "ws://[::1]:8086/", "wss://relay.example.net/"]) {
+    open(url).close();
+  }
+  new RelayConnection({ url: "ws://relay.example.net/", WebSocket: FakeWebSocket, window: null }).close();
+});
+
+test("a WebSocket constructor error does not carry the token into onClose", (t) => {
+  class Throwing {
+    constructor(url, protocols) {
+      throw new SyntaxError(`invalid subprotocols: ${protocols.join(", ")}`);
+    }
+  }
+  const { events } = setup(t, { WebSocket: Throwing });
+  assert.equal(events.closes.length, 1);
+  assert.doesNotMatch(events.closes[0].reason, /rr_test_secret/);
+  assert.doesNotMatch(events.closes[0].error.message, /rr_test_secret/);
+  assert.match(events.closes[0].reason, /\[token\]/);
+});

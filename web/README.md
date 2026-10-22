@@ -6,7 +6,7 @@ a Cloudflare Worker with static assets. Static files, no build step.
 | File | Purpose |
 |---|---|
 | `index.html` | Landing page (signed out) and dashboard (signed in). |
-| `app.js` | Auth0 sign-in, calls to the relay's `/api/me` and `/api/orgs` routes, rendering: account, usage, sessions, tokens, and organizations (switcher, members, invitations; a `?invite=<token>` link is accepted after sign-in and the token is removed from the address bar at once). API data is only ever inserted as text nodes. |
+| `app.js` | Auth0 sign-in, calls to the relay's `/api/me` and `/api/orgs` routes, rendering: account, usage, sessions, tokens, and organizations (switcher, members, invitations; a `#invite=<token>` link (or the older `?invite=<token>`) is accepted after sign-in and the token is removed from the address bar at once). API data is only ever inserted as text nodes. |
 | `config.js` | Public configuration: relay URL, Auth0 domain, client id and audience, Turnstile sitekey. |
 | `styles.css` | Light and dark themes via CSS tokens. |
 | `_headers` | Content Security Policy and other response headers applied to the static assets. |

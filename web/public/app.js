@@ -144,13 +144,16 @@
   const currentOrg = () => orgs.find((o) => o.id === currentOrgId) || null;
   const orgScoped = (path) => path.startsWith("/api/me") && path !== "/api/me/orgs";
 
-  // An invitation link carries a one-time token in ?invite=. Take it out of the
-  // address bar at once so it is not left in history, and keep it only in this
-  // tab's session storage across the sign-in redirect.
+  // An invitation link carries a one-time token in #invite=: a fragment is
+  // never sent to the server, so the token stays out of edge logs. Links
+  // made before carry ?invite=, still accepted. Take it out of the address
+  // bar at once so it is not left in history, and keep it only in this tab's
+  // session storage across the sign-in redirect.
   function captureInvite() {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
     const params = new URLSearchParams(window.location.search);
-    if (!params.has("invite")) return;
-    const token = params.get("invite");
+    if (!hash.has("invite") && !params.has("invite")) return;
+    const token = hash.get("invite") || params.get("invite");
     params.delete("invite");
     const rest = params.toString();
     window.history.replaceState({}, document.title, window.location.pathname + (rest ? `?${rest}` : ""));
@@ -172,6 +175,13 @@
   }
 
   // --- Auth0 ---------------------------------------------------------------
+  const SIGN_IN_ERRORS = {
+    access_denied: "Sign-in failed: access was denied.",
+    login_required: "Sign-in failed: please sign in again.",
+    consent_required: "Sign-in failed: consent is required. Please sign in again.",
+    interaction_required: "Sign-in failed: please sign in again.",
+    default: "Sign-in failed. Please try again.",
+  };
   let auth0Client = null;
   let profile = null;
 
@@ -199,7 +209,9 @@
       }
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (params.has("error")) {
-      showStatus(`Sign-in failed: ${params.get("error_description") || params.get("error")}`, true);
+      // The query is attacker-controlled (anyone can link here with
+      // ?error=...), so show fixed text, never error_description.
+      showStatus(SIGN_IN_ERRORS[params.get("error")] || SIGN_IN_ERRORS.default, true);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -707,7 +719,7 @@
         body: { email: form.elements.email.value.trim(), role: form.elements.role.value },
       });
       form.reset();
-      $("#invite-link").textContent = `${window.location.origin}/?invite=${encodeURIComponent(created.token)}`;
+      $("#invite-link").textContent = `${window.location.origin}/#invite=${encodeURIComponent(created.token)}`;
       $("#invite-reveal").hidden = false;
       await loadInvites();
     } finally {

@@ -21,6 +21,7 @@ export const RELAY_URL = "wss://relay.relaynet.network/";
 export const SUBPROTOCOL = "relay.v1";
 
 const OPEN = 1;
+const LOOPBACK_HOSTS = /^(localhost|127(\.\d{1,3}){3}|\[::1\])$/;
 // A session must stay open this long before backoff starts over, so a relay
 // that accepts and immediately closes does not cause a tight loop.
 const STABLE_SESSION_MS = 10000;
@@ -64,6 +65,12 @@ export class RelayConnection {
     window: win = globalThis.document ? globalThis : null,
   } = {}) {
     if (!WebSocketImpl) throw new Error("relaynet: no WebSocket implementation; pass one as options.WebSocket");
+    // The token travels in the upgrade request; over ws:// anyone on the path
+    // reads it. Loopback is allowed for a relay run locally.
+    const { protocol, hostname } = new URL(url);
+    if (token && protocol === "ws:" && !LOOPBACK_HOSTS.test(hostname)) {
+      throw new Error(`relaynet: refusing to send a token over ws:// to ${hostname}; use wss://`);
+    }
     this.url = url;
     this.token = token;
     this.handlers = { onFrame, onOpen, onClose, onStateChange };
@@ -169,7 +176,10 @@ export class RelayConnection {
     try {
       ws = new this.WebSocket(this.url, protocols);
     } catch (error) {
-      this.finish({ code: 0, reason: error.message, error });
+      // Some implementations quote the subprotocols, and so the token, in
+      // the message; never pass it on.
+      const reason = this.token ? String(error.message).split(this.token).join("[token]") : error.message;
+      this.finish({ code: 0, reason, error: new Error(reason) });
       return;
     }
     ws.binaryType = "arraybuffer";
