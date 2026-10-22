@@ -143,8 +143,10 @@ repeat.
 ## Publish the client library
 
 Bump `version` in `client/package.json` in the PR. Merging publishes it to
-npm (Actions → **publish client**, trusted publishing with provenance; no npm
-token exists). A merge that does not change the version publishes nothing.
+npm (Actions → **publish client**, trusted publishing; no npm token exists;
+npm adds provenance once the repository is public). A merge that does not
+change the version publishes nothing; the run's last step shows what the
+registry holds.
 
 ## Deploy the log shipper
 

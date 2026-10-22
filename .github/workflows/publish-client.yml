@@ -2,8 +2,9 @@ name: publish client
 
 # Publishes the relaynet package (client/) to npm when the version in
 # client/package.json on main is not on npm yet: bump the version in a PR,
-# merge, done. Trusted publishing (OIDC): no npm token is stored, and npm
-# attaches provenance. npmjs.com → relaynet → Settings → Trusted publisher:
+# merge, done. Trusted publishing (OIDC): no npm token is stored. (npm adds
+# provenance only for public repositories.) npmjs.com → relaynet → Settings →
+# Trusted publisher:
 # GitHub Actions, beriberikix/relaynet, workflow publish-client.yml,
 # environment npm.
 
@@ -41,5 +42,12 @@ jobs:
         with:
           package: client
           access: public
-      - if: steps.publish.outputs.id == ''
-        run: echo "relaynet@${{ steps.publish.outputs.version }} is already on npm; nothing to publish"
+      # The action's own result is unreliable with npm 11 (it can report
+      # "already published" right after publishing), so ask the registry.
+      - name: Report what the registry has
+        env:
+          VERSION: ${{ steps.publish.outputs.version }}
+        run: |
+          npm view "relaynet@$VERSION" --prefer-online --json \
+            | jq -r '"relaynet@\(.version) on npm, published \(.time[.version] // "?") by \(._npmUser | if type == "object" then .name else . end // "?")"' \
+            || { echo "::error::relaynet@$VERSION is not on npm"; exit 1; }
