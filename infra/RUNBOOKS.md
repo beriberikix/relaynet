@@ -34,8 +34,9 @@ Run both within a minute or two of waking the machine, or it may sleep again:
 ```sh
 umask 077; openssl rand -base64 24 | tr -d '/+=' | cut -c1-24 > /tmp/stg-pw   # keep this file private
 B64=$(base64 -w0 infra/staging/tmp-operator.js)
+# The password goes on stdin, never in a command line (local `ps`, the remote argv).
 fly ssh console -a relaynet-staging -u node -q -C \
-  "sh -c 'echo $B64 | base64 -d > /tmp/op.js && ACTION=create PW=$(cat /tmp/stg-pw) node /tmp/op.js; rc=\$?; rm -f /tmp/op.js; exit \$rc'"
+  "sh -c 'echo $B64 | base64 -d > /tmp/op.js && read -r PW && ACTION=create PW=\$PW node /tmp/op.js; rc=\$?; rm -f /tmp/op.js; exit \$rc'" < /tmp/stg-pw
 # sign in as tmp-operator with the password in /tmp/stg-pw, do what you need, then:
 fly ssh console -a relaynet-staging -u node -q -C \
   "sh -c 'echo $B64 | base64 -d > /tmp/op.js && ACTION=remove node /tmp/op.js; rc=\$?; rm -f /tmp/op.js; exit \$rc'"

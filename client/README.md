@@ -69,7 +69,7 @@ emulator.add_listener("net0-send", (frame) => relay.send(frame));
 | Option | Default | |
 |---|---|---|
 | `token` | | API token, sent as the `relay.token.<token>` subprotocol |
-| `url` | `wss://relay.relaynet.network/` | Relay endpoint |
+| `url` | `wss://relay.relaynet.network/` | Relay endpoint. With a token, `ws://` is refused except to `localhost`, `127.x.x.x` and `[::1]` |
 | `onFrame`, `onOpen`, `onClose`, `onStateChange` | no-ops | Callbacks shown above |
 | `heartbeatMs` | `20000` | Heartbeat interval |
 | `heartbeatTimeoutMs` | `10000` | How long a probe may go unanswered |

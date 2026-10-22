@@ -5,7 +5,10 @@ app = "relaynet-logs"
 primary_region = "sjc"
 
 [build]
-  image = "ghcr.io/superfly/fly-log-shipper:latest"
+  # Pinned by digest: the image is third-party and holds the org's log
+  # token. This is the `latest` build running since setup (newer than the
+  # v0.0.11 tag); bump deliberately after reading the upstream changes.
+  image = "ghcr.io/superfly/fly-log-shipper@sha256:844d084753fa29f2f45e3fa37711615793816859929727fb4f01a11c62a3c642"
 
 [[vm]]
   size = "shared-cpu-1x"
