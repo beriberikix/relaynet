@@ -4,10 +4,12 @@
   "private": true,
   "description": "relaynet landing page and account dashboard (static)",
   "scripts": {
-    "dev": "python3 -m http.server 5173 -d public",
-    "deploy": "wrangler deploy"
+    "vendor": "mkdir -p public/vendor && cp node_modules/@auth0/auth0-spa-js/dist/auth0-spa-js.production.js public/vendor/",
+    "dev": "npm run vendor && python3 -m http.server 5173 -d public",
+    "deploy": "npm run vendor && wrangler deploy"
   },
   "devDependencies": {
+    "@auth0/auth0-spa-js": "2.3.0",
     "wrangler": "^4.151.1"
   },
   "type": "module"

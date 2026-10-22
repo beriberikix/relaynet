@@ -34,7 +34,7 @@ jobs:
       # The lockfile's Wrangler, so Dependabot's bumps are what deploys; it
       # needs no install scripts.
       - working-directory: web
-        run: npm ci --no-audit --no-fund --ignore-scripts
+        run: npm ci --no-audit --no-fund --ignore-scripts && npm run vendor
       - uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -45,7 +45,7 @@ jobs:
         working-directory: web
         run: |
           # URL path → file in public/ ("/" serves index.html).
-          for pair in /:index.html /app.js:app.js /config.js:config.js; do
+          for pair in /:index.html /app.js:app.js /config.js:config.js /vendor/auth0-spa-js.production.js:vendor/auth0-spa-js.production.js; do
             url="https://relaynet.network${pair%%:*}" file="public/${pair#*:}"
             for i in 1 2 3 4 5 6; do
               curl -fsS "$url" -o /tmp/live && cmp -s /tmp/live "$file" && break
@@ -54,5 +54,5 @@ jobs:
             done
             echo "$url matches $file"
           done
-          curl -fsSI https://relaynet.network/ | grep -qi '^content-security-policy:' \
-            || { echo "::error::no Content-Security-Policy header (_headers not applied?)"; exit 1; }
+          curl -fsSI https://relaynet.network/ | grep -i '^content-security-policy:' | grep -q "script-src 'self';" \
+            || { echo "::error::Content-Security-Policy missing or script-src is not 'self' (_headers not applied?)"; exit 1; }
