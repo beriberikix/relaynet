@@ -43,19 +43,21 @@ kill_timeout = 15
   # (created in the operator panel under Invites).
   SIGNUP_MODE = "invite"
 
-  # The admin port is not in [http_service], so it is never public. Reach it
-  # with `fly proxy 8001:8001`, which lands on plain HTTP at localhost.
-  # Fly's private network is IPv6-only, so the admin server must bind "::"
-  # (dual-stack); the image default of 0.0.0.0 is unreachable from the tunnel
-  # and from the metrics scraper.
+  # The operator panel is public at https://admin.relaynet.network: the
+  # public listener hands requests for that name to the admin app (relay
+  # sessions are refused there, and METRICS_PUBLIC does not apply). Sign-in
+  # is Auth0 SSO with MFA only. The admin port 8001 itself stays private, for
+  # the metrics scraper; Fly's private network is IPv6-only, so it binds "::".
+  ADMIN_PUBLIC_HOST = "admin.relaynet.network"
   ADMIN_BIND_ADDRESS = "::"
-  ADMIN_COOKIE_SECURE = "false"
-  ADMIN_TRUST_PROXY = "false"
+  # TLS ends at Fly's proxy, which sets X-Forwarded-Proto; trusting it is what
+  # lets the Secure session cookie be set.
+  ADMIN_COOKIE_SECURE = "true"
+  ADMIN_TRUST_PROXY = "true"
   # Operator single sign-on through Auth0 (app relaynet-admin, MFA required).
   # Client id and secret are Fly secrets; without them SSO stays off.
-  # Open the panel at http://localhost:8001 (the registered callback host).
   ADMIN_OIDC_ISSUER = "https://jonathanberi.us.auth0.com/"
-  ADMIN_OIDC_REDIRECT_URL = "http://localhost:8001/auth/callback"
+  ADMIN_OIDC_REDIRECT_URL = "https://admin.relaynet.network/auth/callback"
   # SSO only: the password form and POST /api/login are disabled.
   ADMIN_PASSWORD_LOGIN = "false"
 

@@ -47,13 +47,13 @@ Restore procedures: `../infra/RUNBOOKS.md`.
 
 ## Operator panel
 
-```sh
-fly proxy 8001:8001
-open http://127.0.0.1:8001
-```
+Production: https://admin.relaynet.network (`ADMIN_PUBLIC_HOST`; Auth0 SSO
+with MFA). Staging stays private: `fly proxy 8002:8001 -a relaynet-staging`,
+then http://localhost:8002.
 
-The admin port is only reachable over Fly's private network. Metrics are
-scraped by Fly automatically and show up under the app's Grafana dashboard.
+The admin port 8001 itself is only reachable over Fly's private network.
+Metrics are scraped there by Fly automatically and show up under the app's
+Grafana dashboard.
 
 ## Updating the relay
 
