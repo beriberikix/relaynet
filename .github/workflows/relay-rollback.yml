@@ -1,0 +1,73 @@
+name: relay rollback
+
+# Redeploys the image of an earlier Fly release, then probes /healthz:
+#
+#   gh workflow run relay-rollback.yml -f app=production             # the release before the current one
+#   gh workflow run relay-rollback.yml -f app=production -f release=v28
+#
+# Release numbers are in the deploy runs' logs and on the Fly dashboard.
+# Database migrations are not undone; an older release runs against the
+# newer schema, which every release so far tolerates (see infra/RUNBOOKS.md).
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Which relay"
+        type: choice
+        options: [staging, production]
+        default: staging
+      release:
+        description: "Release to go back to, e.g. v28 (default: the one before the current)"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # The deploy workflow's group, so a rollback and a deploy never overlap.
+  group: deploy-relay
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.app }}
+    env:
+      APP: ${{ inputs.app == 'production' && 'relaynet' || 'relaynet-staging' }}
+      CONFIG: ${{ inputs.app == 'production' && 'fly.toml' || 'fly.staging.toml' }}
+      HOST: ${{ inputs.app == 'production' && 'relay.relaynet.network' || 'relay-staging.relaynet.network' }}
+      RELEASE: ${{ inputs.release }}
+      FLY_API_TOKEN: ${{ inputs.app == 'production' && secrets.FLY_DEPLOY_TOKEN_PRODUCTION || secrets.FLY_DEPLOY_TOKEN_STAGING }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+        with:
+          version: 0.4.120
+      - name: Find the image
+        id: image
+        run: |
+          releases=$(flyctl releases -a "$APP" --json)
+          if [ -n "$RELEASE" ]; then
+            echo "$RELEASE" | grep -Eq '^v?[0-9]+$' || { echo "::error::release must look like v28"; exit 1; }
+            image=$(echo "$releases" | jq -r --argjson v "${RELEASE#v}" '.[] | select(.Version == $v) | .ImageRef')
+          else
+            image=$(echo "$releases" | jq -r '[.[] | select(.Status == "complete")][1].ImageRef')
+          fi
+          [ -n "$image" ] && [ "$image" != null ] || { echo "::error::no image found for that release"; exit 1; }
+          echo "$releases" | jq -r '.[:5][] | "v\(.Version) \(.Status) \(.CreatedAt) \(.ImageRef)"'
+          echo "Rolling $APP back to $image"
+          echo "ref=$image" >> "$GITHUB_OUTPUT"
+      - name: Deploy it
+        working-directory: relay
+        env:
+          IMAGE: ${{ steps.image.outputs.ref }}
+        run: flyctl deploy -c "$CONFIG" -a "$APP" --ha=false --image "$IMAGE"
+      - name: Probe /healthz
+        run: |
+          for i in $(seq 12); do
+            curl -fsS "https://$HOST/healthz" && echo && exit 0
+            sleep 10
+          done
+          echo "::error::https://$HOST/healthz did not answer 200 within 2 minutes"; exit 1

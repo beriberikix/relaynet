@@ -1,0 +1,14 @@
+// The scheduled relay probe (see src/index.ts). Deployed, with its secrets
+// PROBE_RELAY_TOKEN and BETTERSTACK_PROBE_HEARTBEAT_URL copied from the
+// repository's Actions secrets, by .github/workflows/deploy-probe-worker.yml.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "relaynet-probe",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-06",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "vars": { "RELAY_URL": "wss://relay.relaynet.network/" },
+  "triggers": { "crons": ["*/5 * * * *"] }
+}

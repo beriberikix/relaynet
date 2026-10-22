@@ -1,7 +1,7 @@
 version: 2
 updates:
   # The relay pins the fork by release tarball; Dependabot cannot bump that,
-  # so this covers the container base image, the web tooling and the
+  # so this covers the container base image, the Workers tooling and the
   # workflows' actions (pinned by commit; Dependabot updates hash and comment).
   - package-ecosystem: docker
     directory: /relay
@@ -13,7 +13,7 @@ updates:
       - dependency-name: node
         update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
-    directory: /web
+    directories: ["/web", "/infra/probe-worker"]
     schedule:
       interval: weekly
     groups:

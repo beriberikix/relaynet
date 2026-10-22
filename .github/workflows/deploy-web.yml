@@ -1,0 +1,58 @@
+name: deploy web
+
+# Pushes to main that touch web/ deploy https://relaynet.network (a Cloudflare
+# Worker with static assets, web/wrangler.jsonc) and check that the live files
+# match the commit. Run it by hand to redeploy.
+#
+# Environment "cloudflare" (main only; shared with deploy-probe-worker.yml):
+# secret CLOUDFLARE_API_TOKEN, scoped to Workers on this account and the
+# relaynet.network zone; variable CLOUDFLARE_ACCOUNT_ID.
+
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/deploy-web.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: cloudflare
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      # The lockfile's Wrangler, so Dependabot's bumps are what deploys; it
+      # needs no install scripts.
+      - working-directory: web
+        run: npm ci --no-audit --no-fund --ignore-scripts
+      - uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          command: deploy
+      - name: Check the live site serves this commit
+        working-directory: web
+        run: |
+          # URL path → file in public/ ("/" serves index.html).
+          for pair in /:index.html /app.js:app.js /config.js:config.js; do
+            url="https://relaynet.network${pair%%:*}" file="public/${pair#*:}"
+            for i in 1 2 3 4 5 6; do
+              curl -fsS "$url" -o /tmp/live && cmp -s /tmp/live "$file" && break
+              [ "$i" = 6 ] && { echo "::error::$url does not match $file"; exit 1; }
+              sleep 10
+            done
+            echo "$url matches $file"
+          done
+          curl -fsSI https://relaynet.network/ | grep -qi '^content-security-policy:' \
+            || { echo "::error::no Content-Security-Policy header (_headers not applied?)"; exit 1; }
