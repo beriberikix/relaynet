@@ -7,3 +7,6 @@ node_modules/
 *.sqlite-shm
 .DS_Store
 .cloudflare/
+
+# Copied from web/node_modules at deploy time (npm run vendor).
+web/public/vendor/
