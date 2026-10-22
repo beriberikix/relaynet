@@ -1,0 +1,37 @@
+name: deploy log shipper
+
+# Pushes to main that touch infra/log-shipper/ (its image pin or VM size)
+# deploy the relaynet-logs app. Run it by hand to redeploy.
+#
+# Secret: FLY_DEPLOY_TOKEN_LOGS, a deploy token for relaynet-logs. The app's
+# own secrets (ORG, ACCESS_TOKEN, SUBJECT, LOKI_*) live on Fly.
+
+on:
+  push:
+    branches: [main]
+    paths: ["infra/log-shipper/**", ".github/workflows/deploy-log-shipper.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-log-shipper
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+        with:
+          version: 0.4.120
+      - name: Deploy relaynet-logs
+        working-directory: infra/log-shipper
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_DEPLOY_TOKEN_LOGS }}
+        run: |
+          flyctl deploy --ha=false
+          flyctl status

@@ -1,0 +1,45 @@
+name: publish client
+
+# Publishes the relaynet package (client/) to npm when the version in
+# client/package.json on main is not on npm yet: bump the version in a PR,
+# merge, done. Trusted publishing (OIDC): no npm token is stored, and npm
+# attaches provenance. npmjs.com → relaynet → Settings → Trusted publisher:
+# GitHub Actions, beriberikix/relaynet, workflow publish-client.yml,
+# environment npm.
+
+on:
+  push:
+    branches: [main]
+    paths: ["client/**", ".github/workflows/publish-client.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-client
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Test
+        working-directory: client
+        run: npm test
+      - uses: JS-DevTools/npm-publish@0fd2f4369c5d6bcfcde6091a7c527d810b9b5c3f # v4.1.5
+        id: publish
+        with:
+          package: client
+          access: public
+      - if: steps.publish.outputs.id == ''
+        run: echo "relaynet@${{ steps.publish.outputs.version }} is already on npm; nothing to publish"

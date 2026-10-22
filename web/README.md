@@ -14,14 +14,17 @@ a Cloudflare Worker with static assets. Static files, no build step.
 
 ## Deploy
 
+Merging to `main` deploys (`.github/workflows/deploy-web.yml`, with
+`cloudflare/wrangler-action`); `gh workflow run deploy-web.yml` redeploys.
+To see what would be uploaded:
+
 ```sh
-cd web && npx cf deploy             # or: npm run deploy
-npx cf deploy --dry-run             # build and list the assets without publishing
+cd web && npm ci && npx wrangler deploy --dry-run
 ```
 
-`wrangler.config.ts` points the assets at `./public`; `cloudflare.config.ts`
-names the Worker and binds the apex custom domain `relaynet.network`. The page's origin
-must stay listed in `ALLOWED_ORIGINS` in `../relay/fly.toml`.
+`wrangler.jsonc` names the Worker, points the assets at `./public` and binds
+the apex custom domain `relaynet.network`. The page's origin must stay listed
+in `ALLOWED_ORIGINS` in `../relay/fly.toml`.
 
 ## Local development
 

@@ -5,10 +5,9 @@
   "description": "relaynet landing page and account dashboard (static)",
   "scripts": {
     "dev": "python3 -m http.server 5173 -d public",
-    "deploy": "cf deploy"
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "cf": "^1.0.0-beta.18",
     "wrangler": "^4.151.1"
   },
   "type": "module"

@@ -1,6 +1,6 @@
 # Ships the relay's logs (Fly's NATS log stream) to Grafana Cloud Loki.
 # Secrets: ORG, ACCESS_TOKEN (read-only org token), SUBJECT, LOKI_URL,
-# LOKI_USERNAME, LOKI_PASSWORD. Deploy: `fly deploy` from this directory.
+# LOKI_USERNAME, LOKI_PASSWORD. Deployed by .github/workflows/deploy-log-shipper.yml.
 app = "relaynet-logs"
 primary_region = "sjc"
 

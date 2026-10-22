@@ -1,0 +1,44 @@
+name: deploy probe worker
+
+# Pushes to main that touch infra/probe-worker/ deploy the scheduled relay
+# probe (Cloudflare Worker relaynet-probe, cron every 5 minutes) and copy its
+# two secrets from this repository's Actions secrets, so rotating them is
+# `gh secret set …` then `gh workflow run deploy-probe-worker.yml`.
+
+on:
+  push:
+    branches: [main]
+    paths: ["infra/probe-worker/**", ".github/workflows/deploy-probe-worker.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-probe-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: cloudflare
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - working-directory: infra/probe-worker
+        run: npm ci --no-audit --no-fund --ignore-scripts
+      - uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+        env:
+          PROBE_RELAY_TOKEN: ${{ secrets.PROBE_RELAY_TOKEN }}
+          BETTERSTACK_PROBE_HEARTBEAT_URL: ${{ secrets.BETTERSTACK_PROBE_HEARTBEAT_URL }}
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: infra/probe-worker
+          command: deploy
+          secrets: |
+            PROBE_RELAY_TOKEN
+            BETTERSTACK_PROBE_HEARTBEAT_URL

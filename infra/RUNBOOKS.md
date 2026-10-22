@@ -98,8 +98,9 @@ Audit rows are kept 30 days; ban decisions do not expire.
 By hand, if Actions is unavailable: `fly deploy --ha=false` from `relay/`
 (staging: `fly deploy -c fly.staging.toml --ha=false`).
 
-Roll back with `fly releases -a relaynet` and
-`fly deploy --ha=false --image <previous image>`. Migrations are not undone
+Roll back with `gh workflow run relay-rollback.yml -f app=production` (the
+release before the current one) or `-f release=v28`; it redeploys that
+release's image and probes `/healthz`. Migrations are not undone
 by an older image. Releases before the organizations release (v0.7.0-hosted.1)
 can only be rolled back by restoring the pre-deploy backup; the
 organizations release itself can also be rolled back by image, see below.
@@ -134,7 +135,21 @@ The Fly deploy tokens in Actions secrets (`FLY_DEPLOY_TOKEN_*`) expire on
 
 ## Deploy the website
 
-`cf deploy` from `web/`. Static files only; instant and safe to repeat.
+Merging a change under `web/` deploys it (Actions → **deploy web**, which
+also checks the live files match the commit). Redeploy with
+`gh workflow run deploy-web.yml`. Static files only; instant and safe to
+repeat.
+
+## Publish the client library
+
+Bump `version` in `client/package.json` in the PR. Merging publishes it to
+npm (Actions → **publish client**, trusted publishing with provenance; no npm
+token exists). A merge that does not change the version publishes nothing.
+
+## Deploy the log shipper
+
+Merging a change under `infra/log-shipper/` (its image pin) deploys
+`relaynet-logs` (Actions → **deploy log shipper**).
 
 ## Backups
 
