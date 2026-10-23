@@ -149,6 +149,17 @@
 
     <!-- Dashboard -->
     <section id="dashboard" hidden>
+      <div class="card" id="card-join" hidden>
+        <h3>Join an organization?</h3>
+        <p>You opened an invitation to an organization. If you join, its owners and admins see your account
+          in their member list, and the dashboard switches to the organization. Join only if you expected
+          this invitation.</p>
+        <div class="inline-form">
+          <button class="btn btn-primary" type="button" data-action="invite-join">Join</button>
+          <button class="btn" type="button" data-action="invite-ignore">Ignore</button>
+        </div>
+      </div>
+
       <div class="card" id="card-invite" hidden>
         <h3>Redeem your invite</h3>
         <p>relaynet is in an invite-only beta. Enter the code you were sent to activate your account.</p>

@@ -539,6 +539,12 @@
     await loadInvites();
   }
 
+  // An invitation is accepted only on the user's say-so: a link someone
+  // else sent must not move the account into an organization by itself.
+  function offerInvite() {
+    $("#card-join").hidden = !hasInvite();
+  }
+
   async function acceptInvite(token) {
     const joined = await api("/api/invites/accept", { method: "POST", body: { token } });
     currentOrgId = joined.orgId;
@@ -667,6 +673,17 @@
           target.textContent = "Copy";
         }, 1500);
         break;
+      case "invite-join": {
+        const token = takeInvite();
+        $("#card-join").hidden = true;
+        if (token) await acceptInvite(token);
+        break;
+      }
+      case "invite-ignore":
+        takeInvite();
+        $("#card-join").hidden = true;
+        showStatus("Invitation ignored. Open the link again if you change your mind.", false);
+        break;
       case "dismiss-invite":
         $("#invite-reveal").hidden = true;
         $("#invite-link").textContent = "";
@@ -756,8 +773,7 @@
       form.reset();
       showStatus("Your account is active. Create a token to connect.", false);
       await loadDashboard();
-      const invite = takeInvite();
-      if (invite) await acceptInvite(invite);
+      offerInvite();
     } finally {
       button.disabled = false;
     }
@@ -784,7 +800,7 @@
     showView(authed);
     if (!authed) {
       if (pendingInvite || storeGet(INVITE_KEY, window.sessionStorage)) {
-        showStatus("You have been invited to an organization. Sign in to accept the invitation.", false, true);
+        showStatus("You have been invited to an organization. Sign in to see the invitation.", false, true);
       }
       return;
     }
@@ -797,7 +813,6 @@
       }
       return;
     }
-    const invite = takeInvite();
-    if (invite) await acceptInvite(invite);
+    offerInvite();
   })();
 })();
