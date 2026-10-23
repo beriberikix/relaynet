@@ -1,0 +1,56 @@
+name: sbom
+
+# Software bills of materials (CycloneDX) for what relaynet ships:
+#
+# - relay-image: the relay container, built from relay/Dockerfile exactly as
+#   Fly builds it, scanned whole (Debian packages, Node, Litestream, the
+#   rootlessRelay package and its npm dependencies).
+# - web: the site's lockfile. The only third-party code the site serves is
+#   @auth0/auth0-spa-js (copied to public/vendor); the rest is build tooling.
+#
+# The client library and the probe Worker have no runtime dependencies.
+# Kept as workflow artifacts for 90 days; re-run for any commit with
+# "Run workflow".
+on:
+  push:
+    branches: [main]
+    paths: ["relay/**", "web/package.json", "web/package-lock.json", ".github/workflows/sbom.yml"]
+  pull_request:
+    paths: [".github/workflows/sbom.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Build the relay image
+        run: docker build -t relaynet-relay:sbom relay
+      - uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: relaynet-relay:sbom
+          format: cyclonedx-json
+          output-file: relay-image.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Site SBOM
+        working-directory: web
+        run: npm sbom --sbom-format cyclonedx --package-lock-only > ../web.cdx.json
+      - name: Summary
+        run: |
+          for f in relay-image.cdx.json web.cdx.json; do
+            echo "$f: $(jq '[.components[] | select(.type != "file")] | length' "$f") packages"
+          done | tee -a "$GITHUB_STEP_SUMMARY"
+          jq -r '.components[] | select(.name == "rootlessrelay" or .name == "github.com/benbjohnson/litestream" or .name == "node" or .name == "sqlite3") | "\(.name) \(.version)"' relay-image.cdx.json | sort -u | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-${{ github.sha }}
+          path: "*.cdx.json"
+          retention-days: 90
