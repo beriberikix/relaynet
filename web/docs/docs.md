@@ -520,11 +520,11 @@ Beta accounts have these limits. They are per account unless noted.
 |---|---|
 | Concurrent sessions | 4 per account, 4 per client IP address |
 | Bandwidth | 1 MiB/s download and 1 MiB/s upload, per session |
-| Data quota | 20 GiB per calendar month (UTC), both directions combined |
+| Data quota | 20 GiB per calendar month (UTC), both directions combined; traffic between your own VMs counts once |
 | Open TCP connections | 256 per session |
-| New TCP connections | 50 per second per session |
+| New TCP connections | 50 per second per account, all sessions together |
 | UDP flows | 256 per session |
-| DNS queries | 100 per second per session |
+| DNS queries | 100 per second per account, all sessions together |
 | Session length | 12 hours; 30 minutes idle |
 | Blocked ports | 25; UDP reflector services (see [Outbound rules](#outbound-rules)) |
 

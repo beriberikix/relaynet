@@ -129,7 +129,9 @@ sessions are refused there. Sign-in is Auth0 SSO with MFA (password login
 off). Writes need the panel's `X-Requested-With` header and a same-origin
 `Origin`; other hostnames get 421; the page has a strict CSP and cannot be
 framed. `/metrics` on the public name needs a sign-in; the scraper reads it on
-the private admin port 8001, which stays off the internet. DNS: like
+the private admin port 8001, which stays off the internet and serves only
+`/metrics` (`ADMIN_PRIVATE_METRICS_ONLY`; other apps in the Fly org share the
+private network). DNS: like
 `relay`, `admin` is a proxied CNAME to `8wyq65k.relaynet.fly.dev`, with
 `_acme-challenge.admin` (CNAME, DNS-only) and `_fly-ownership.admin` (TXT)
 for the Fly certificate. Staging's panel stays private (`fly proxy 8002:8001`).
