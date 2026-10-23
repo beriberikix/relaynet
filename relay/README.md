@@ -41,9 +41,11 @@ Litestream runs as the entrypoint and streams `/data/relay.sqlite` to the R2
 bucket `relaynet-backups` (`litestream.yml`, prefix from
 `LITESTREAM_REPLICA_PATH`). On boot with an empty volume it restores first
 and refuses to start if the restore fails. Credentials are the Fly secrets
-`LITESTREAM_ACCESS_KEY_ID` and `LITESTREAM_SECRET_ACCESS_KEY`. Set
+`LITESTREAM_ACCESS_KEY_ID` and `LITESTREAM_SECRET_ACCESS_KEY`, and the R2
+endpoint (`https://<account id>.r2.cloudflarestorage.com`) is the secret
+`LITESTREAM_ENDPOINT`. Set
 `LITESTREAM_ENABLED=false` to run the relay without it (local experiments).
-Restore procedures: `../infra/RUNBOOKS.md`.
+Restore procedures are in the operator runbooks in the private relaynet-private repository.
 
 ## Operator panel
 
@@ -67,8 +69,8 @@ npm install --package-lock-only --ignore-scripts   # refreshes package-lock.json
 docker build --network host .                     # optional local check
 ```
 
-Merging to `main` deploys staging (see `infra/RUNBOOKS.md`, "Deploy the
-relay"). To check where a tarball came from:
+Merging to `main` deploys staging; production is a manual run of the
+**deploy relay** workflow with "production" checked. To check where a tarball came from:
 
 ```sh
 gh release download vX.Y.Z-hosted.N -R beriberikix/rootlessRelay -p '*.tgz'

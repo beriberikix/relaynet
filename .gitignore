@@ -10,3 +10,4 @@ node_modules/
 
 # Copied from web/node_modules at deploy time (npm run vendor).
 web/public/vendor/
+__pycache__/

@@ -1,6 +1,7 @@
 # Litestream streams the relay's SQLite database to Cloudflare R2.
 # Credentials come from Fly secrets (LITESTREAM_ACCESS_KEY_ID /
-# LITESTREAM_SECRET_ACCESS_KEY, a token scoped to this one bucket).
+# LITESTREAM_SECRET_ACCESS_KEY, a token scoped to this one bucket), and so
+# does the R2 endpoint (LITESTREAM_ENDPOINT, which names the account).
 # ${VAR} references are expanded from the environment at startup.
 
 # Prometheus metrics (replication position, errors) for Fly's scraper.
@@ -18,6 +19,6 @@ dbs:
       type: s3
       bucket: ${LITESTREAM_BUCKET}
       path: ${LITESTREAM_REPLICA_PATH}
-      endpoint: https://d156933bd2b70b1dc965c34c2573a796.r2.cloudflarestorage.com
+      endpoint: ${LITESTREAM_ENDPOINT}
       region: auto
       sync-interval: 1s

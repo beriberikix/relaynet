@@ -8,7 +8,7 @@
 //   SESSIONS=200 DOWNLOADERS=50 RAMP_PER_SEC=10 HOLD_S=120 node load.mjs
 //
 // One account and one client IP open every session, so the target needs its
-// per-account and per-IP caps raised first (see infra/RUNBOOKS.md, "Load test").
+// per-account and per-IP caps raised first (see "Load test" in the operator runbooks, relaynet-private).
 // Prints a status line every 10 s and a summary at the end.
 
 const RELAY_URL = process.env.RELAY_URL || "wss://relay-staging.relaynet.network/";

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Creates or removes a temporary operator on a relay database, for when the
 // operator password for staging is not to hand. Run it inside the machine with
-// `fly ssh console` (see "Reach the staging panel" in infra/RUNBOOKS.md).
+// `fly ssh console` (see "Reach the staging panel" in the operator runbooks, relaynet-private).
 //
 //   ACTION=create PW=<24+ char password> node tmp-operator.js
 //   ACTION=remove node tmp-operator.js
