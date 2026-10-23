@@ -7,7 +7,7 @@ name: relay rollback
 #
 # Release numbers are in the deploy runs' logs and on the Fly dashboard.
 # Database migrations are not undone; an older release runs against the
-# newer schema, which every release so far tolerates (see infra/RUNBOOKS.md).
+# newer schema, which every release so far tolerates (see the operator runbooks in relaynet-private).
 
 on:
   workflow_dispatch:

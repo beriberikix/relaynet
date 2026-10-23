@@ -1,6 +1,8 @@
 # infra
 
-Setup notes for the services around the relay. Nothing here is code.
+Setup notes for the services around the relay. Account and stack
+identifiers, secret digests and the operator runbooks are in the private
+relaynet-private repository.
 
 ## Auth0 (user logins)
 
@@ -71,9 +73,8 @@ end to end in production on 2026-10-20.
    fly secrets set -a relaynet JWT_VERIFIED_CLAIM="https://relaynet/email_verified"
    fly secrets list -a relaynet | grep JWT_VERIFIED_CLAIM        # same digest = same value
    ```
-   Observed 2026-10-20: re-setting the identical value left the digest
-   unchanged (`dea4aec59b9e8ca5`). Setting a secret restarts the relay and
-   closes live sessions.
+   Re-setting the identical value leaves the digest unchanged. Setting a
+   secret restarts the relay and closes live sessions.
 3. **End to end.** In the operator panel create a shared org whose owner is
    **not you** (use the probe account; if you own it, accepting answers
    `already-member`), then on https://relaynet.network, signed in, with `ORG`
@@ -132,7 +133,7 @@ framed. `/metrics` on the public name needs a sign-in; the scraper reads it on
 the private admin port 8001, which stays off the internet and serves only
 `/metrics` (`ADMIN_PRIVATE_METRICS_ONLY`; other apps in the Fly org share the
 private network). DNS: like
-`relay`, `admin` is a proxied CNAME to `8wyq65k.relaynet.fly.dev`, with
+`relay`, `admin` is a proxied CNAME to the app's Fly hostname, with
 `_acme-challenge.admin` (CNAME, DNS-only) and `_fly-ownership.admin` (TXT)
 for the Fly certificate. Staging's panel stays private (`fly proxy 8002:8001`).
 
@@ -144,10 +145,10 @@ and heartbeat URL.
 
 | What | Where | Alerts |
 |---|---|---|
-| Uptime: `relay.relaynet.network/healthz` (keyword `"ok":true`) and `relaynet.network`, every 3 min from US and EU | Better Stack Uptime (team t615516), monitors "Relay health", "Dashboard" | email + push |
+| Uptime: `relay.relaynet.network/healthz` (keyword `"ok":true`) and `relaynet.network`, every 3 min from US and EU | Better Stack Uptime, monitors "Relay health", "Dashboard" | email + push |
 | End-to-end probe: API token auth, DHCP lease, DNS lookup through the relay, every 5 min, one retry | Cloudflare Worker `relaynet-probe` (`infra/probe-worker`, cron trigger; secrets `PROBE_RELAY_TOKEN`, `BETTERSTACK_PROBE_HEARTBEAT_URL`), account `probe` (user tier). Deploy probes and manual runs use `infra/probe/probe.mjs` in GitHub Actions | Better Stack heartbeat "Relay end-to-end probe" (period 5 min, grace 5 min): `/fail` on error |
 | Public status page | https://status.relaynet.network (CNAME to Better Stack, DNS-only) | — |
-| Metrics: relay (`rootlessrelay_*`) and Fly platform (`fly_*`) | Grafana Cloud stack `calmwasp3063`, data source `fly-relaynet` (Fly managed Prometheus, read-only org token `grafana-metrics-readonly`), dashboard "relaynet relay" | Grafana alert rules in folder `relaynet` → contact point "relaynet email" |
+| Metrics: relay (`rootlessrelay_*`) and Fly platform (`fly_*`) | Grafana Cloud stack, data source `fly-relaynet` (Fly managed Prometheus, read-only org token `grafana-metrics-readonly`), dashboard "relaynet relay" | Grafana alert rules in folder `relaynet` → contact point "relaynet email" |
 | Logs | Fly app `relaynet-logs` (fly-log-shipper, subject `logs.relaynet.>`) → Grafana Cloud Loki; query `{fly_app_name="relaynet"}` | — |
 | Backups | weekly `backup-restore-check.yml` | opens a GitHub issue |
 
@@ -156,7 +157,7 @@ restarted unexpectedly (a restart with no clean shutdown in the logs, so
 deploys stay quiet), sessions above 200 of 240, memory under 15% free, 5xx at the
 relay, authentication-failure spike, egress-denial spike (scanning), more
 than 10 GB relayed per hour (cost), CPU burst balance low and CPU throttled
-(see RUNBOOKS.md, Capacity).
+(see Capacity in the operator runbooks).
 
 Litestream's metrics are appended to the relay's `/metrics`
 (`METRICS_MERGE_URLS`; Fly scrapes one endpoint per app) and alert on upload

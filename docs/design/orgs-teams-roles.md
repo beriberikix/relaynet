@@ -337,4 +337,4 @@ What shipped, and where it differs from the plan above.
 - **Not built:** teams (#106) and the dashboard screens and org switcher
   (#65, #63).
 - **Rollback** of this release by image is supported; the observed behaviour
-  is in `infra/RUNBOOKS.md`.
+  is in the operator runbooks (relaynet-private).

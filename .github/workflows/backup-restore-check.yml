@@ -32,6 +32,7 @@ jobs:
         env:
           LITESTREAM_ACCESS_KEY_ID: ${{ secrets.R2_RO_ACCESS_KEY_ID }}
           LITESTREAM_SECRET_ACCESS_KEY: ${{ secrets.R2_RO_SECRET_ACCESS_KEY }}
+          LITESTREAM_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           LITESTREAM_BUCKET: relaynet-backups
           LITESTREAM_REPLICA_PATH: prod
           ADMIN_AUTH_DB_PATH: /data/relay.sqlite
@@ -53,4 +54,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue create --title "Backup restore check failed ($(date -u +%F))" \
-            --body "The weekly Litestream restore from R2 failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. See infra/RUNBOOKS.md."
+            --body "The weekly Litestream restore from R2 failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. See Backups in the operator runbooks (relaynet-private)."

@@ -119,7 +119,7 @@ def rule(name, expr, op, threshold, pending, severity, summary):
         "execErrState": "Error",
         "for": pending,
         "labels": {"team": "relaynet", "severity": severity},
-        "annotations": {"summary": summary, "runbook_url": "https://github.com/beriberikix/relaynet/blob/main/infra/RUNBOOKS.md"},
+        "annotations": {"summary": summary, "runbook_url": "https://github.com/beriberikix/relaynet-private/blob/main/ops/RUNBOOKS.md"},
         "folderUID": FOLDER_UID,
         "ruleGroup": "relaynet",
     }
@@ -162,7 +162,7 @@ UNEXPECTED_RESTART = {
     "labels": {"team": "relaynet", "severity": "critical"},
     "annotations": {
         "summary": "The relay restarted without a clean shutdown (crash, out-of-memory kill or host failure); live sessions were dropped. Check `fly logs -a relaynet` around the restart.",
-        "runbook_url": "https://github.com/beriberikix/relaynet/blob/main/infra/RUNBOOKS.md",
+        "runbook_url": "https://github.com/beriberikix/relaynet-private/blob/main/ops/RUNBOOKS.md",
     },
     "folderUID": FOLDER_UID,
     "ruleGroup": "relaynet",
