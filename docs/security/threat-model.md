@@ -179,7 +179,7 @@ Every app in the Fly org can reach every other app's private addresses.
 
 | Threat | Control | Evidence |
 |---|---|---|
-| A compromised action or a moved tag | Every action pinned by full SHA; flyctl version pinned; Dependabot for npm, Docker and Actions; vulnerability alerts on | CI-2, CI-3 |
+| A compromised action or a moved tag | Every action pinned by full SHA; flyctl version pinned; Dependabot for npm, Docker and Actions; vulnerability alerts on; workflows default to a read-only token in both repositories | CI-2, CI-3, CI-12 |
 | Install-time code from a dependency | `npm ci --ignore-scripts`, then only `sqlite3` rebuilt | CI-5 |
 | A changed base image | Base and log-shipper images pinned by digest | CI-6 |
 | A changed relay dependency | The fork is pinned to a release tag whose version must match `package.json`; the lockfile hash fails closed on any change | CI-9 (residual: GitHub archive, #25) |
@@ -194,7 +194,7 @@ Every app in the Fly org can reach every other app's private addresses.
 | Auth0 | Mint tokens for any user, including an operator identity | Operator also needs an existing `operator` row and MFA; relay refuses unverified addresses. Accepted dependency. |
 | Cloudflare | See and alter all HTTP and WebSocket traffic; serve a different dashboard | TLS to Fly is Full (strict). Accepted dependency. |
 | Fly.io | Full control of the relay and its volume | Accepted dependency. |
-| GitHub | Change code and run deploys | Accepted dependency. The owner account should have 2FA or a passkey (CI-1); not verified here. |
+| GitHub | Change code and run deploys | Accepted dependency; 2FA on the owner account. |
 | Grafana Cloud, Better Stack | Read logs (which include emails and client IPs) and metrics | Read-only tokens; logs as described in the privacy policy (MT-7). |
 
 ## Accepted risks
@@ -216,8 +216,6 @@ Every app in the Fly org can reach every other app's private addresses.
 - **No required reviewer on production deploys** (CI-1). Waits for the
   public repository and its plan (#77).
 - **Relay dependency is a GitHub archive; no SBOM** (CI-9, #25).
-- **Fork repository default workflow permissions are `write`** (CI-12).
-  `relaynet` is `read`.
 - **External review**: no penetration test or responsible-disclosure policy
   yet (#26, #80).
 
