@@ -47,7 +47,7 @@ kill_timeout = 15
   # public listener hands requests for that name to the admin app (relay
   # sessions are refused there, and METRICS_PUBLIC does not apply). Sign-in
   # is Auth0 SSO with MFA only. The admin port 8001 itself stays private, for
-  # the metrics scraper; Fly's private network is IPv6-only, so it binds "::".
+  # the metrics scraper only; Fly's private network is IPv6-only, so it binds "::".
   ADMIN_PUBLIC_HOST = "admin.relaynet.network"
   ADMIN_BIND_ADDRESS = "::"
   # TLS ends at Fly's proxy, which sets X-Forwarded-Proto; trusting it is what
@@ -60,6 +60,9 @@ kill_timeout = 15
   ADMIN_OIDC_REDIRECT_URL = "https://admin.relaynet.network/auth/callback"
   # SSO only: the password form and POST /api/login are disabled.
   ADMIN_PASSWORD_LOGIN = "false"
+  # Port 8001 answers only /metrics: other apps in the Fly org share the
+  # private network, so the panel is served only on admin.relaynet.network.
+  ADMIN_PRIVATE_METRICS_ONLY = "true"
 
   # Fly's metrics scraper reads /metrics over the private network without auth.
   METRICS_ENABLED = "true"
