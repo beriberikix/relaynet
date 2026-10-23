@@ -24,36 +24,36 @@ Auth0.
 flowchart TB
   subgraph Internet["Untrusted: the internet"]
     direction LR
-    VM["Tenant VM<br/>(guest code, any OS)"]
+    VM["Tenant VM<br/>(guest code)"]
     Browser["Dashboard user"]
     Op["Operator"]
     Anyone["Anyone"]
   end
 
-  Auth0["Auth0<br/>relaynet-web (SPA, PKCE)<br/>relaynet-admin (MFA)"]
+  Auth0["Auth0<br/>dashboard +<br/>admin apps"]
 
   subgraph CF["Cloudflare"]
     direction LR
-    Site["relaynet.network<br/>Worker + static assets"]
-    Edge["relay. and admin.<br/>TLS proxy"]
-    Probe["Probe Worker"]
+    Site["Dashboard<br/>site"]
+    Edge["TLS proxy<br/>relay., admin."]
+    Probe["Probe"]
   end
 
-  subgraph Fly["Fly.io org: one private network (6PN)"]
+  subgraph Fly["Fly.io org (shared 6PN)"]
     subgraph Relay["App relaynet"]
-      Pub["Public listener :8086<br/>sessions, account API,<br/>panel for admin. host"]
-      Stack["Data plane<br/>IP stack + egress policy"]
-      DB[("SQLite volume")]
-      Adm["Admin port :8001<br/>/metrics only"]
+      Pub["Public :8086<br/>sessions, API,<br/>admin panel"]
+      Stack["Data plane<br/>IP stack,<br/>egress policy"]
+      DB[("SQLite")]
+      Adm["Admin :8001<br/>/metrics only"]
     end
-    Staging["relaynet-staging"]
-    Logs["relaynet-logs"]
-    Prom["Managed Prometheus"]
+    Staging["Staging app"]
+    Logs["Log shipper"]
+    Prom["Prometheus"]
   end
 
-  Dest["Internet destinations"]
+  Dest["Internet<br/>hosts"]
   R2[("R2 backups")]
-  Obs["Grafana Cloud,<br/>Better Stack"]
+  Obs["Grafana,<br/>Better Stack"]
   GH["GitHub Actions"]
 
   VM -- "wss + token" --> Edge
@@ -66,7 +66,7 @@ flowchart TB
   Edge --> Pub
   Pub --> Stack
   Pub --> DB
-  Stack -- "TCP / UDP / DNS<br/>from the relay's IP" --> Dest
+  Stack -- "TCP, UDP, DNS<br/>as the relay" --> Dest
   DB -- "Litestream" --> R2
   Prom -- "scrape" --> Adm
   Prom & Logs --> Obs
