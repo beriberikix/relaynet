@@ -20,3 +20,11 @@ infra/   setup notes for Cloudflare, Auth0 and operator access
 
 Bump the relay by changing the tarball version in `relay/package.json` and
 running `npm install` there to refresh the lockfile.
+
+## License
+
+Apache-2.0 (see `LICENSE`), except `client/`, which is MIT (`client/LICENSE`).
+The relay, [rootlessRelay](https://github.com/beriberikix/rootlessRelay), is
+MIT. The names "relaynet" and "relaynet.network" and the logo are not
+licensed; see `docs/design/license-options.md` for why the licensing is set
+up this way. Contributions are signed off under the DCO (`CONTRIBUTING.md`).

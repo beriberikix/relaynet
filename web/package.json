@@ -2,6 +2,7 @@
   "name": "relaynet-web",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "relaynet landing page and account dashboard (static)",
   "scripts": {
     "vendor": "mkdir -p public/vendor && cp node_modules/@auth0/auth0-spa-js/dist/auth0-spa-js.production.js public/vendor/",

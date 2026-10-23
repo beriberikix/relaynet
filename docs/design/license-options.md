@@ -4,7 +4,22 @@ Decision input for #78 (part of #77, the open-source release). Written
 2026-10-23. Nothing here is legal advice; a short review by a lawyer before
 publishing is cheap and worth it.
 
-## The decision
+## Decision (2026-10-23)
+
+**A + D, with a DCO.**
+
+- rootlessRelay (the fork) stays **MIT**.
+- relaynet is **Apache-2.0** (`LICENSE`); `client/` stays **MIT**, as it is
+  already published on npm under MIT.
+- Billing and plan administration, and the production operations
+  configuration, live in a **private repository** (#79, #48).
+- Contributions are signed off under the **DCO** (`CONTRIBUTING.md`, the
+  `dco` check in both repositories); no CLA.
+- A **trademark policy** (#81) covers the name and logo.
+
+The rest of this document is the analysis the decision was made from.
+
+## The questions
 
 Three questions, in this order:
 
