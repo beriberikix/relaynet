@@ -46,9 +46,9 @@ jobs:
       - name: Summary
         run: |
           for f in relay-image.cdx.json web.cdx.json; do
-            echo "$f: $(jq '.components | length' "$f") components"
+            echo "$f: $(jq '[.components[] | select(.type != "file")] | length' "$f") packages"
           done | tee -a "$GITHUB_STEP_SUMMARY"
-          jq -r '.components[] | select(.name == "rootlessrelay" or .name == "litestream" or .name == "node" or .name == "sqlite3") | "\(.name) \(.version)"' relay-image.cdx.json | sort -u | tee -a "$GITHUB_STEP_SUMMARY"
+          jq -r '.components[] | select(.name == "rootlessrelay" or .name == "github.com/benbjohnson/litestream" or .name == "node" or .name == "sqlite3") | "\(.name) \(.version)"' relay-image.cdx.json | sort -u | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sbom-${{ github.sha }}
