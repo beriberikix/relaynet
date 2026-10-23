@@ -79,9 +79,12 @@ Audit rows are kept 30 days; ban decisions do not expire.
 
 ## Deploy the relay
 
-1. Tag a fork release (`vX.Y.Z-hosted.N`) after its CI is green.
-2. In `relay/package.json` point the tarball at the tag, run `npm install`,
-   commit and push. The **deploy relay** workflow deploys
+1. Tag a fork release (`vX.Y.Z-hosted.N`) after its CI is green. The fork's
+   **release** workflow checks the tag against `package.json` and attaches
+   the `npm pack` tarball, an SBOM and a provenance attestation; wait for it.
+2. In `relay/package.json` point the dependency at that release's tarball
+   (see "Updating the relay" in `relay/README.md`), run `npm install`, commit
+   and push. The **deploy relay** workflow deploys
    `relaynet-staging` and probes it.
 3. If the release has a database migration, take a manual copy of
    production first (see Backups).

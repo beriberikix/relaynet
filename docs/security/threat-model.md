@@ -182,7 +182,7 @@ Every app in the Fly org can reach every other app's private addresses.
 | A compromised action or a moved tag | Every action pinned by full SHA; flyctl version pinned; Dependabot for npm, Docker and Actions; vulnerability alerts on; workflows default to a read-only token in both repositories | CI-2, CI-3, CI-12 |
 | Install-time code from a dependency | `npm ci --ignore-scripts`, then only `sqlite3` rebuilt | CI-5 |
 | A changed base image | Base and log-shipper images pinned by digest | CI-6 |
-| A changed relay dependency | The fork is pinned to a release tag whose version must match `package.json`; the lockfile hash fails closed on any change | CI-9 (residual: GitHub archive, #25) |
+| A changed relay dependency | The relay depends on the `npm pack` tarball attached to a fork release, whose tag must match `package.json`; the tarball carries a build-provenance attestation and the lockfile hash fails closed on any change. CI writes CycloneDX SBOMs of the relay image and the site (`sbom.yml`) | CI-9, #25 |
 | Deploying unreviewed code to production | `production`, `cloudflare` and `npm` environments accept only `main`; production deploys are a manual promotion | CI-1 (residual: no required reviewer until the repo is public, #77) |
 | Leaked deploy credentials | Fly deploy tokens scoped to one app; Cloudflare token limited to Workers on one zone, with an expiry; npm publishes by OIDC trusted publishing with no stored token; secrets live in environments | #132 |
 | Secrets in the repository | Full-history scan clean; run gitleaks again before publication | audit "Open-source readiness", #79 |
@@ -215,7 +215,6 @@ Every app in the Fly org can reach every other app's private addresses.
 
 - **No required reviewer on production deploys** (CI-1). Waits for the
   public repository and its plan (#77).
-- **Relay dependency is a GitHub archive; no SBOM** (CI-9, #25).
 - **External review**: no penetration test or responsible-disclosure policy
   yet (#26, #80).
 
