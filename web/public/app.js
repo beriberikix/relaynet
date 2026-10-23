@@ -100,7 +100,7 @@
     "not-found": "That organization or member wasn't found.",
     "invite-invalid": "This invitation is invalid, already used, revoked or expired. Ask for a new one.",
     "invite-email-mismatch": "This invitation was sent to a different email address than the one you signed in with.",
-    "email-not-verified": "Your email address isn't verified with the sign-in provider, so the invitation can't be accepted. Verify it, sign in again and open the link again.",
+    "email-not-verified": "Your email address isn't verified with the sign-in provider. Verify it, then sign in again (and open the invitation link again if you were joining an organization).",
     "already-member": "You are already a member of that organization.",
     "account-pending": "Your account isn't active yet. Redeem your beta invite code, then reload this page to join.",
     "sole-owner": "You are the only owner of an organization that has other members. Make someone else an owner, or delete the organization first.",
