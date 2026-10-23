@@ -21,58 +21,57 @@ tokens and usage live in the relay's SQLite database; people sign in through
 Auth0.
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph Internet["Untrusted: the internet"]
+    direction LR
     VM["Tenant VM<br/>(guest code, any OS)"]
-    Browser["Dashboard user's browser"]
-    Op["Operator's browser"]
-    Dest["Internet destinations"]
+    Browser["Dashboard user"]
+    Op["Operator"]
     Anyone["Anyone"]
   end
 
-  subgraph CF["Cloudflare (TLS edge)"]
-    Edge["Proxy: relay. and admin.<br/>relaynet.network"]
-    Site["Worker + static assets<br/>relaynet.network"]
-    Probe["Probe Worker (cron)"]
+  Auth0["Auth0<br/>relaynet-web (SPA, PKCE)<br/>relaynet-admin (MFA)"]
+
+  subgraph CF["Cloudflare"]
+    direction LR
+    Site["relaynet.network<br/>Worker + static assets"]
+    Edge["relay. and admin.<br/>TLS proxy"]
+    Probe["Probe Worker"]
   end
 
-  subgraph Fly["Fly.io org relaynet (shared 6PN)"]
-    subgraph Relay["App relaynet (one machine)"]
-      Pub["Public listener :8086<br/>relay sessions, account API,<br/>admin app for admin. host"]
-      Stack["Data plane<br/>user-space IP stack, egress policy"]
+  subgraph Fly["Fly.io org: one private network (6PN)"]
+    subgraph Relay["App relaynet"]
+      Pub["Public listener :8086<br/>sessions, account API,<br/>panel for admin. host"]
+      Stack["Data plane<br/>IP stack + egress policy"]
+      DB[("SQLite volume")]
       Adm["Admin port :8001<br/>/metrics only"]
-      DB[("SQLite on volume<br/>users, orgs, token hashes,<br/>invites, usage, audit log")]
-      LS["Litestream"]
     end
-    Staging["App relaynet-staging"]
-    Logs["App relaynet-logs<br/>(fly-log-shipper)"]
-    Prom["Fly managed Prometheus"]
+    Staging["relaynet-staging"]
+    Logs["relaynet-logs"]
+    Prom["Managed Prometheus"]
   end
 
-  Auth0["Auth0 tenant<br/>relaynet-web (SPA, PKCE)<br/>relaynet-admin (MFA)"]
-  R2[("Cloudflare R2<br/>relaynet-backups")]
-  Obs["Grafana Cloud, Better Stack"]
-  GH["GitHub Actions<br/>(deploys, probes, backup checks)"]
+  Dest["Internet destinations"]
+  R2[("R2 backups")]
+  Obs["Grafana Cloud,<br/>Better Stack"]
+  GH["GitHub Actions"]
 
   VM -- "wss + token" --> Edge
-  Browser -- "HTTPS" --> Site
-  Browser -- "account API + Auth0 access token" --> Edge
-  Op -- "HTTPS, SSO session" --> Edge
-  Browser & Op -- "sign-in" --> Auth0
+  Browser --> Site
+  Browser -- "account API" --> Edge
+  Op -- "SSO session" --> Edge
+  Browser & Op -. "sign-in" .-> Auth0
+  Anyone -. "probes, floods" .-> Edge
+  Probe --> Edge
   Edge --> Pub
   Pub --> Stack
-  Stack -- "TCP/UDP/DNS as the relay" --> Dest
   Pub --> DB
-  LS -- "replicate" --> R2
-  DB --- LS
+  Stack -- "TCP / UDP / DNS<br/>from the relay's IP" --> Dest
+  DB -- "Litestream" --> R2
   Prom -- "scrape" --> Adm
-  Logs -- "NATS log stream" --> Obs
-  Prom --> Obs
-  Probe -- "end-to-end check" --> Edge
-  GH -- "deploy tokens" --> Fly
-  GH -- "API token" --> CF
-  GH -- "read-only key" --> R2
-  Anyone -. "probes, floods" .-> Edge
+  Prom & Logs --> Obs
+  GH -- "deploy, check backups" --> Fly
+  GH -- "deploy" --> CF
 ```
 
 ## Assets
