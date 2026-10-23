@@ -21,8 +21,12 @@ WORKDIR /app
 # git is needed in the image. No dependency's install script runs except
 # sqlite3's, which fetches its prebuilt native binary.
 COPY package.json package-lock.json ./
+# The download from GitHub releases is sometimes slower than prebuild-install's
+# timeout, and there is no compiler to fall back on, so retry a few times.
 RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts \
- && npm rebuild sqlite3
+ && for i in 1 2 3 4; do npm rebuild sqlite3 && break; \
+      [ "$i" = 4 ] && exit 1; echo "sqlite3 binary download failed; retrying" >&2; sleep 5; done \
+ && node -e "require('sqlite3')"
 
 COPY litestream.yml /etc/litestream.yml
 COPY entrypoint.sh /app/entrypoint.sh
