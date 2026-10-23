@@ -7,6 +7,6 @@
     "start": "node node_modules/rootlessrelay/relay.js"
   },
   "dependencies": {
-    "rootlessrelay": "https://github.com/beriberikix/rootlessRelay/archive/refs/tags/v0.7.0-hosted.12.tar.gz"
+    "rootlessrelay": "https://github.com/beriberikix/rootlessRelay/releases/download/v0.7.0-hosted.12/rootlessrelay-0.7.0-hosted.12.tgz"
   }
 }

@@ -57,12 +57,22 @@ Grafana dashboard.
 
 ## Updating the relay
 
-Change the tarball tag in `package.json`, then:
+The relay is the `npm pack` tarball attached to a fork release
+(`releases/download/vX.Y.Z-hosted.N/rootlessrelay-X.Y.Z-hosted.N.tgz`), not
+GitHub's generated source archive. Change both version numbers in that URL in
+`package.json`, then:
 
 ```sh
-npm install          # refreshes package-lock.json
-docker build .       # optional local check
-fly deploy --ha=false
+npm install --package-lock-only --ignore-scripts   # refreshes package-lock.json
+docker build --network host .                     # optional local check
+```
+
+Merging to `main` deploys staging (see `infra/RUNBOOKS.md`, "Deploy the
+relay"). To check where a tarball came from:
+
+```sh
+gh release download vX.Y.Z-hosted.N -R beriberikix/rootlessRelay -p '*.tgz'
+gh attestation verify rootlessrelay-X.Y.Z-hosted.N.tgz -R beriberikix/rootlessRelay
 ```
 
 ## Running locally
