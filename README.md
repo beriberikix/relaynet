@@ -25,6 +25,7 @@ running `npm install` there to refresh the lockfile.
 
 Apache-2.0 (see `LICENSE`), except `client/`, which is MIT (`client/LICENSE`).
 The relay, [rootlessRelay](https://github.com/beriberikix/rootlessRelay), is
-MIT. The names "relaynet" and "relaynet.network" and the logo are not
-licensed; see `docs/design/license-options.md` for why the licensing is set
-up this way. Contributions are signed off under the DCO (`CONTRIBUTING.md`).
+MIT. The names "relaynet" and "relaynet.network" are not licensed; see
+`TRADEMARKS.md` for how to use them, `GOVERNANCE.md` for how the project is
+run, and `docs/design/license-options.md` for why the licensing is set up
+this way. Contributions are signed off under the DCO (`CONTRIBUTING.md`).
