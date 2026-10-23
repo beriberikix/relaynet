@@ -2,6 +2,7 @@
   "name": "relaynet-relay",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Container wrapper around rootlessRelay in hosted mode",
   "scripts": {
     "start": "node node_modules/rootlessrelay/relay.js"
