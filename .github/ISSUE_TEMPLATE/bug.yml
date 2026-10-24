@@ -1,0 +1,40 @@
+name: Bug report
+description: Something in relaynet doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems: don't file them here; email security@relaynet.network (see SECURITY.md).
+        Never paste API tokens, access tokens or session cookies into an issue.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - Hosted service (relay.relaynet.network)
+        - Dashboard or site (relaynet.network)
+        - Client library (npm relaynet)
+        - Self-hosting (relay/ container)
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The smallest steps that show it. For connection problems include the client (VM, stack, browser) and the close code or error.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Versions and context
+      description: Client library version, browser, relay version if self-hosted, time (UTC) it happened.

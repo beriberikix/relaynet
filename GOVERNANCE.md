@@ -35,6 +35,5 @@ will say how they decide together.
 
 ## Conduct
 
-Be respectful and assume good faith. The maintainer may hide comments, lock
-threads, or block people who harass others or disrupt the project. A fuller
-code of conduct will come with the public launch (#80).
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md)
+(Contributor Covenant 3.0). The maintainer enforces it.
