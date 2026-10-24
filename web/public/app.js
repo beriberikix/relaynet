@@ -2,8 +2,12 @@
 (function () {
   "use strict";
 
-  const cfg = window.RELAYNET_CONFIG;
+  const cfg = window.RELAYNET_CONFIG || {};
   const $ = (sel) => document.querySelector(sel);
+  // Where the relay is: its own origin (relaynet.network's relay.), or this
+  // page's origin when a proxy serves both (docker compose).
+  const relayBase = (cfg.relayUrl || window.location.origin).replace(/\/$/, "");
+  const relayWsUrl = relayBase.replace(/^http/, "ws");
 
   // --- DOM helpers (text nodes only; API data never becomes HTML) ----------
   function el(tag, attrs, children) {
@@ -102,6 +106,12 @@
     "invite-email-mismatch": "This invitation was sent to a different email address than the one you signed in with.",
     "email-not-verified": "Your email address isn't verified with the sign-in provider. Verify it, then sign in again (and open the invitation link again if you were joining an organization).",
     "already-member": "You are already a member of that organization.",
+    "invite-username-mismatch": "This invitation was made for a different username than the one you signed in with.",
+    "invalid-credentials": "Wrong username or password.",
+    "too-many-attempts": "Too many attempts. Wait a while and try again.",
+    "username-taken": "That username is taken. Choose another.",
+    "invite-code-required": "Sign-up needs an invite code.",
+    "account-suspended": "This account is suspended. Contact the operator.",
     "account-pending": "Your account isn't active yet. Redeem your beta invite code, then reload this page to join.",
     "sole-owner": "You are the only owner of an organization that has other members. Make someone else an owner, or delete the organization first.",
     "org-suspended": "This organization is suspended. Contact the operator.",
@@ -174,7 +184,14 @@
     return token;
   }
 
-  // --- Auth0 ---------------------------------------------------------------
+  // --- Sign-in ---------------------------------------------------------------
+  // Two ways in, either or both, chosen at runtime:
+  // - OIDC (cfg.oidc: issuer, clientId, audience): any OpenID Connect
+  //   provider, authorization code with PKCE (oidc-client-ts). The access
+  //   token's audience is the relay.
+  // - Relay accounts (the relay's GET /api/auth/config says passwordLogin):
+  //   username and password checked by the relay, which returns a sign-in
+  //   token kept in this tab's session storage.
   const SIGN_IN_ERRORS = {
     access_denied: "Sign-in failed: access was denied.",
     login_required: "Sign-in failed: please sign in again.",
@@ -182,66 +199,178 @@
     interaction_required: "Sign-in failed: please sign in again.",
     default: "Sign-in failed. Please try again.",
   };
-  let auth0Client = null;
-  let profile = null;
+  const RELAY_SESSION_KEY = "relaynet.session";
+  let oidcManager = null;
+  let authConfig = { passwordLogin: false, signup: null };
+  let method = null; // "oidc" | "relay" while signed in
+  let profile = null; // { name } for the top bar
+
+  function sessionExpiredError() {
+    const expired = new Error("session-expired");
+    expired.sessionExpired = true;
+    return expired;
+  }
+
+  function readRelaySession() {
+    try {
+      const saved = JSON.parse(storeGet(RELAY_SESSION_KEY, window.sessionStorage) || "null");
+      if (saved && saved.token && new Date(saved.expiresAt).getTime() > Date.now()) return saved;
+    } catch (_error) {
+      // unreadable; treat as signed out
+    }
+    storeDel(RELAY_SESSION_KEY, window.sessionStorage);
+    return null;
+  }
 
   async function initAuth() {
-    auth0Client = await auth0.createAuth0Client({
-      domain: cfg.auth0.domain,
-      clientId: cfg.auth0.clientId,
-      cacheLocation: "localstorage",
-      useRefreshTokens: true,
-      // Sessions cached before refresh tokens were enabled have none; fall
-      // back to a silent iframe exchange instead of failing.
-      useRefreshTokensFallback: true,
-      authorizationParams: {
-        redirect_uri: window.location.origin,
-        audience: cfg.auth0.audience,
-      },
-    });
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("code") && params.has("state")) {
-      try {
-        await auth0Client.handleRedirectCallback();
-      } catch (error) {
-        showStatus(`Sign-in failed: ${error.message || error}`, true);
-      }
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (params.has("error")) {
-      // The query is attacker-controlled (anyone can link here with
-      // ?error=...), so show fixed text, never error_description.
-      showStatus(SIGN_IN_ERRORS[params.get("error")] || SIGN_IN_ERRORS.default, true);
-      window.history.replaceState({}, document.title, window.location.pathname);
+    // Tokens cached by the Auth0 SDK this page used before: not used any more.
+    try {
+      for (const key of Object.keys(window.localStorage)) if (key.startsWith("@@auth0spajs@@")) window.localStorage.removeItem(key);
+    } catch (_error) {
+      // storage unavailable
+    }
+    try {
+      const res = await fetch(`${relayBase}/api/auth/config`);
+      if (res.ok) authConfig = await res.json();
+    } catch (_error) {
+      // relay unreachable: OIDC sign-in still works; data calls will say so
     }
 
-    const authed = await auth0Client.isAuthenticated();
-    if (authed) profile = await auth0Client.getUser();
-    return authed;
-  }
-
-  function login() {
-    return auth0Client.loginWithRedirect();
-  }
-
-  function logout() {
-    return auth0Client.logout({ logoutParams: { returnTo: window.location.origin } });
-  }
-
-  // Errors that mean "the stored session can no longer mint tokens".
-  const SESSION_EXPIRED = new Set(["login_required", "missing_refresh_token", "invalid_grant", "consent_required", "interaction_required"]);
-
-  async function accessToken() {
-    try {
-      return await auth0Client.getTokenSilently({ authorizationParams: { audience: cfg.auth0.audience } });
-    } catch (error) {
-      if (error && (SESSION_EXPIRED.has(error.error) || /Missing Refresh Token/i.test(error.message || ""))) {
-        const expired = new Error("session-expired");
-        expired.sessionExpired = true;
-        throw expired;
+    if (cfg.oidc && window.oidc && window.oidc.UserManager) {
+      oidcManager = new oidc.UserManager({
+        authority: cfg.oidc.issuer,
+        client_id: cfg.oidc.clientId,
+        redirect_uri: window.location.origin,
+        post_logout_redirect_uri: window.location.origin,
+        response_type: "code",
+        scope: "openid profile email offline_access",
+        extraQueryParams: cfg.oidc.audience ? { audience: cfg.oidc.audience } : {},
+        userStore: new oidc.WebStorageStateStore({ store: window.localStorage }),
+        loadUserInfo: false,
+        automaticSilentRenew: false,
+        monitorSession: false,
+      });
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("code") && params.has("state")) {
+        try {
+          await oidcManager.signinRedirectCallback();
+        } catch (error) {
+          showStatus(SIGN_IN_ERRORS.default, true);
+        }
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+      } else if (params.has("error")) {
+        // The query is attacker-controlled (anyone can link here with
+        // ?error=...), so show fixed text, never error_description.
+        showStatus(SIGN_IN_ERRORS[params.get("error")] || SIGN_IN_ERRORS.default, true);
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
       }
+    }
+
+    const relaySession = authConfig.passwordLogin ? readRelaySession() : null;
+    if (relaySession) {
+      method = "relay";
+      profile = { name: relaySession.username };
+      return true;
+    }
+    if (oidcManager) {
+      const user = await oidcManager.getUser();
+      if (user && (!user.expired || user.refresh_token)) {
+        method = "oidc";
+        profile = { name: (user.profile && (user.profile.email || user.profile.name)) || "" };
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Sign in: straight to the provider when OIDC is the only way; otherwise
+  // the sign-in panel (password form, and an SSO button when OIDC is set).
+  function login() {
+    if (oidcManager && !authConfig.passwordLogin) return oidcManager.signinRedirect();
+    openSignIn("signin");
+    return null;
+  }
+
+  function loginWithOidc() {
+    return oidcManager.signinRedirect();
+  }
+
+  async function finishRelaySignIn(result) {
+    storeSet(RELAY_SESSION_KEY, JSON.stringify({ token: result.token, expiresAt: result.expiresAt, username: result.user.username }), window.sessionStorage);
+    method = "relay";
+    profile = { name: result.user.username };
+    $("#signin").hidden = true;
+    showView(true);
+    await loadDashboard();
+    offerInvite();
+  }
+
+  async function relayAuth(path, body) {
+    const res = await fetch(`${relayBase}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const error = new Error((data && data.error) || `${res.status}`);
+      error.status = res.status;
       throw error;
     }
+    return data;
+  }
+
+  // Drops the local sign-in without asking anyone (expired, deleted account).
+  async function forgetSignIn() {
+    storeDel(RELAY_SESSION_KEY, window.sessionStorage);
+    if (oidcManager) await oidcManager.removeUser();
+    method = null;
+    profile = null;
+  }
+
+  async function logout() {
+    if (method === "relay") {
+      const saved = readRelaySession();
+      if (saved) {
+        await fetch(`${relayBase}/api/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${saved.token}` } }).catch(() => {});
+      }
+      await forgetSignIn();
+      window.location.assign(window.location.pathname);
+      return;
+    }
+    if (oidcManager) {
+      let endSession = null;
+      try {
+        endSession = await oidcManager.metadataService.getEndSessionEndpoint();
+      } catch (_error) {
+        // no discovery: sign out locally
+      }
+      if (endSession) {
+        await oidcManager.signoutRedirect();
+        return;
+      }
+    }
+    await forgetSignIn();
+    window.location.assign(window.location.pathname);
+  }
+
+  async function accessToken() {
+    if (method === "relay") {
+      const saved = readRelaySession();
+      if (!saved) throw sessionExpiredError();
+      return saved.token;
+    }
+    if (!oidcManager) throw sessionExpiredError();
+    let user = await oidcManager.getUser();
+    if (user && user.expired) {
+      try {
+        user = await oidcManager.signinSilent();
+      } catch (_error) {
+        throw sessionExpiredError();
+      }
+    }
+    if (!user || !user.access_token) throw sessionExpiredError();
+    return user.access_token;
   }
 
   // --- Relay API -----------------------------------------------------------
@@ -250,12 +379,14 @@
     const headers = { Authorization: `Bearer ${token}` };
     if (currentOrgId !== null && orgScoped(path)) headers["X-Relay-Org"] = String(currentOrgId);
     if (body !== null) headers["Content-Type"] = "application/json";
-    const res = await fetch(cfg.relayUrl + path, {
+    const res = await fetch(relayBase + path, {
       method,
       headers,
       body: body === null ? undefined : JSON.stringify(body),
     });
     if (res.status === 204) return null;
+    // A relay sign-in that expired or was ended elsewhere.
+    if (res.status === 401 && method === "relay") throw sessionExpiredError();
     let data = null;
     try {
       data = await res.json();
@@ -275,7 +406,7 @@
     const dl = $("#account-kv");
     clear(dl);
     const rows = [
-      ["Signed in as", (profile && (profile.email || profile.name)) || me.user.username],
+      ["Signed in as", (profile && profile.name) || me.user.username],
       ["Account", me.user.username],
       ["Organization", currentOrg() ? `${currentOrg().name} (${ROLE_LABEL[currentRole] || currentRole})` : "none"],
       ["Tier", me.tier.name],
@@ -376,7 +507,7 @@
   function revealToken(created) {
     $("#modal-token").textContent = created.token;
     $("#modal-snippet").textContent =
-      `const ws = new WebSocket("${cfg.relayWsUrl}", [\n` +
+      `const ws = new WebSocket("${relayWsUrl}", [\n` +
       `  "relay.v1",\n` +
       `  "relay.token.${created.token}",\n` +
       `]);`;
@@ -570,8 +701,7 @@
       } catch (error) {
         if (error && error.sessionExpired) {
           // Drop the stale local session and offer a fresh sign-in.
-          await auth0Client.logout({ openUrl: false });
-          profile = null;
+          await forgetSignIn();
           showView(false);
           showStatus("Your session expired. Sign in again to see your dashboard.", false);
         } else if (error && error.status === 429) {
@@ -590,6 +720,38 @@
     };
   }
 
+  // --- Sign-in panel (relay accounts) -------------------------------------------
+  function openSignIn(mode) {
+    const signup = mode === "signup" && authConfig.signup;
+    $("#signin-title").textContent = signup ? "Create an account" : "Sign in";
+    $("#signin-submit").textContent = signup ? "Create account" : "Sign in";
+    $("#signin-code").hidden = !(signup && authConfig.signup === "invite");
+    $("#signin-code").querySelector("input").required = Boolean(signup && authConfig.signup === "invite");
+    $("#signin-form").elements.password.autocomplete = signup ? "new-password" : "current-password";
+    $("#signin-form").dataset.mode = signup ? "signup" : "signin";
+    $("#signin-to-signup").hidden = signup || !authConfig.signup;
+    $("#signin-to-signin").hidden = !signup;
+    $("#signin-sso-row").hidden = !oidcManager;
+    $("#signin").hidden = false;
+    $("#signin-form").elements.username.focus();
+  }
+
+  $("#signin-form").addEventListener("submit", withErrors(async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const button = form.querySelector("button[type=submit]");
+    button.disabled = true;
+    try {
+      const body = { username: form.elements.username.value.trim(), password: form.elements.password.value };
+      if (form.dataset.mode === "signup" && authConfig.signup === "invite") body.code = form.elements.code.value.trim();
+      const result = await relayAuth(form.dataset.mode === "signup" ? "/api/auth/signup" : "/api/auth/login", body);
+      form.reset();
+      await finishRelaySignIn(result);
+    } finally {
+      button.disabled = false;
+    }
+  }));
+
   // --- Wiring --------------------------------------------------------------
   function showView(authed) {
     $("#landing").hidden = authed;
@@ -599,7 +761,7 @@
     for (const link of document.querySelectorAll(".topnav a[data-landing]")) link.hidden = authed;
     const chip = $("#user-chip");
     chip.hidden = !authed;
-    chip.textContent = authed && profile ? (profile.email || profile.name || "") : "";
+    chip.textContent = authed && profile ? profile.name || "" : "";
   }
 
   document.addEventListener("click", withErrors(async (event) => {
@@ -613,6 +775,15 @@
         break;
       case "btn-logout":
         await logout();
+        break;
+      case "signin-sso":
+        await loginWithOidc();
+        break;
+      case "signin-mode":
+        openSignIn(target.dataset.mode);
+        break;
+      case "signin-close":
+        $("#signin").hidden = true;
         break;
       case "refresh-sessions":
         await loadDashboard();
@@ -792,7 +963,7 @@
   }));
 
   withErrors(async () => {
-    if (!window.auth0 || typeof auth0.createAuth0Client !== "function") {
+    if (cfg.oidc && !(window.oidc && window.oidc.UserManager)) {
       throw new Error("the sign-in library failed to load");
     }
     captureInvite();

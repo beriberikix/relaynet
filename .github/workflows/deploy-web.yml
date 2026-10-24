@@ -45,7 +45,7 @@ jobs:
         working-directory: web
         run: |
           # URL path → file in public/ ("/" serves index.html).
-          for pair in /:index.html /app.js:app.js /config.js:config.js /vendor/auth0-spa-js.production.js:vendor/auth0-spa-js.production.js; do
+          for pair in /:index.html /app.js:app.js /config.js:config.js /vendor/oidc-client-ts.min.js:vendor/oidc-client-ts.min.js; do
             url="https://relaynet.network${pair%%:*}" file="public/${pair#*:}"
             for i in 1 2 3 4 5 6; do
               curl -fsS "$url" -o /tmp/live && cmp -s /tmp/live "$file" && break

@@ -5,13 +5,13 @@
   "license": "Apache-2.0",
   "description": "relaynet landing page and account dashboard (static)",
   "scripts": {
-    "vendor": "mkdir -p public/vendor && cp node_modules/@auth0/auth0-spa-js/dist/auth0-spa-js.production.js public/vendor/",
+    "vendor": "mkdir -p public/vendor && rm -f public/vendor/auth0-spa-js.production.js && cp node_modules/oidc-client-ts/dist/browser/oidc-client-ts.min.js public/vendor/",
     "dev": "npm run vendor && python3 -m http.server 5173 -d public",
     "deploy": "npm run vendor && wrangler deploy"
   },
   "devDependencies": {
-    "@auth0/auth0-spa-js": "2.28.4",
-    "wrangler": "^4.151.2"
+    "wrangler": "^4.151.2",
+    "oidc-client-ts": "3.5.0"
   },
   "type": "module"
 }

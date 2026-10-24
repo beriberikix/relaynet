@@ -58,8 +58,8 @@ end to end in production on 2026-10-20.
    JSON" anywhere else, for example on the panel at `admin.relaynet.network`). It only
    decodes locally and sends nothing:
    ```js
-   const k = Object.keys(localStorage).find(k => k.startsWith('@@auth0spajs@@') && k.includes('relay.relaynet.network'));
-   JSON.parse(atob(JSON.parse(localStorage[k]).body.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))
+   const k = Object.keys(localStorage).find(k => k.startsWith('oidc.user:'));
+   JSON.parse(atob(JSON.parse(localStorage[k]).access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))
    ```
    It should contain `"https://relaynet/email_verified": true`.
 2. **The relay's secret names that claim** (the Fly half). Fly shows only a
@@ -82,8 +82,8 @@ end to end in production on 2026-10-20.
    ```js
    const ORG = 0;
    const API = 'https://relay.relaynet.network';
-   const k = Object.keys(localStorage).find(k => k.startsWith('@@auth0spajs@@') && k.includes('relay.relaynet.network'));
-   const t = JSON.parse(localStorage[k]).body.access_token;
+   const k = Object.keys(localStorage).find(k => k.startsWith('oidc.user:'));
+   const t = JSON.parse(localStorage[k]).access_token;
    const claims = JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
    const H = { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' };
    const inv = await (await fetch(`${API}/api/orgs/${ORG}/invites`, { method: 'POST', headers: H, body: JSON.stringify({ email: claims['https://relaynet/email'], role: 'member' }) })).json();

@@ -28,6 +28,23 @@
   <main>
     <section id="status" class="status" hidden></section>
 
+    <!-- Sign-in with a relay account (shown when the relay offers passwords) -->
+    <section id="signin" class="card signin" hidden>
+      <h2 id="signin-title">Sign in</h2>
+      <form id="signin-form" class="stack-form" data-mode="signin">
+        <label>Username <input name="username" type="text" maxlength="128" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+        <label>Password <input name="password" type="password" minlength="8" maxlength="200" autocomplete="current-password" required></label>
+        <label id="signin-code" hidden>Invite code <input name="code" type="text" maxlength="32" placeholder="RLY-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"></label>
+        <div class="form-actions">
+          <button id="signin-submit" class="btn btn-primary" type="submit">Sign in</button>
+          <button class="btn" type="button" data-action="signin-close">Cancel</button>
+        </div>
+      </form>
+      <p id="signin-to-signup" class="muted" hidden>No account? <button class="link" type="button" data-action="signin-mode" data-mode="signup">Create one</button></p>
+      <p id="signin-to-signin" class="muted" hidden>Have an account? <button class="link" type="button" data-action="signin-mode" data-mode="signin">Sign in</button></p>
+      <p id="signin-sso-row" hidden><button class="btn" type="button" data-action="signin-sso">Sign in with single sign-on</button></p>
+    </section>
+
     <!-- Landing -->
     <section id="landing">
       <div class="hero">
@@ -229,7 +246,7 @@
           <h3>Invitations</h3>
         </div>
         <form id="org-invite-form" class="inline-form">
-          <label>Email <input name="email" type="email" maxlength="254" placeholder="colleague@example.com" autocomplete="off" required></label>
+          <label>Email or username <input name="email" type="text" maxlength="254" placeholder="colleague@example.com" autocomplete="off" spellcheck="false" required></label>
           <label>Role
             <select name="role">
               <option value="member" selected>member</option>
@@ -332,7 +349,7 @@
 
   <script src="config.js"></script>
   <!-- Copied from the pinned @auth0/auth0-spa-js package by `npm run vendor`. -->
-  <script src="vendor/auth0-spa-js.production.js"></script>
+  <script src="vendor/oidc-client-ts.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
