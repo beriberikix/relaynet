@@ -1,6 +1,7 @@
 # Contributing
 
-Thanks for helping. Issues and pull requests are both welcome.
+Thanks for helping. Issues and pull requests are both welcome. Everyone
+taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Where things go
 

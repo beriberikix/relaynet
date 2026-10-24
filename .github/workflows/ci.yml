@@ -1,0 +1,64 @@
+name: ci
+
+# Checks for pull requests, including ones from forks: read-only token, no
+# secrets, nothing deployed. Deploys run only on pushes to main (see the
+# deploy-* workflows and their environments).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Client unit tests
+        working-directory: client
+        run: npm test
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Scripts parse
+        run: for f in web/public/*.js; do node --check "$f"; done
+      - name: Generated docs match docs.md
+        run: |
+          python3 web/docs/build.py
+          if ! git diff --exit-code -- web/public; then
+            echo "::error::web/public is out of date; run python3 web/docs/build.py and commit the result"
+            exit 1
+          fi
+
+  relay-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build the relay image
+        run: docker build -t relaynet-relay:ci relay
+      - name: The relay starts and answers /healthz
+        run: |
+          docker run -d --name relay --network host \
+            -e LITESTREAM_ENABLED=false -e WS_PORT=18086 -e ADMIN_PORT=18001 \
+            -e ADMIN_BIND_ADDRESS=127.0.0.1 -e ADMIN_AUTH_DB_PATH=/tmp/relay.sqlite \
+            -e ADMIN_SESSION_SECRET=ci-session-secret-0123456789abcdef \
+            -e ANON_TOKEN_SECRET=ci-anon-secret-0123456789abcdef \
+            -e ALLOWED_ORIGINS=https://example.test \
+            relaynet-relay:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18086/healthz; then echo; exit 0; fi
+            sleep 1
+          done
+          docker logs relay
+          exit 1
