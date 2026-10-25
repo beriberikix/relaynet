@@ -9,6 +9,13 @@
   const relayBase = (cfg.relayUrl || window.location.origin).replace(/\/$/, "");
   const relayWsUrl = relayBase.replace(/^http/, "ws");
 
+  // relaynet.network's own text (beta, tiers, terms, support address) shows
+  // only where config.js says this is that service; elsewhere the neutral
+  // self-hosted text does. Relay addresses in examples follow the config.
+  for (const node of document.querySelectorAll("[data-hosted]")) node.hidden = !cfg.hostedService;
+  for (const node of document.querySelectorAll("[data-self-hosted]")) node.hidden = Boolean(cfg.hostedService);
+  for (const node of document.querySelectorAll(".relay-ws")) node.textContent = relayWsUrl;
+
   // --- DOM helpers (text nodes only; API data never becomes HTML) ----------
   function el(tag, attrs, children) {
     const node = document.createElement(tag);
@@ -758,7 +765,9 @@
     $("#dashboard").hidden = !authed;
     $("#btn-login").hidden = authed;
     $("#btn-logout").hidden = !authed;
-    for (const link of document.querySelectorAll(".topnav a[data-landing]")) link.hidden = authed;
+    for (const link of document.querySelectorAll(".topnav a[data-landing]")) {
+      link.hidden = authed || (link.hasAttribute("data-hosted") && !cfg.hostedService);
+    }
     const chip = $("#user-chip");
     chip.hidden = !authed;
     chip.textContent = authed && profile ? profile.name || "" : "";

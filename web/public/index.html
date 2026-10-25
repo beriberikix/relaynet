@@ -17,7 +17,7 @@
     <nav class="topnav">
       <a href="#uses" data-landing>Use cases</a>
       <a href="#how" data-landing>How it works</a>
-      <a href="#tiers" data-landing>Tiers</a>
+      <a href="#tiers" data-landing data-hosted hidden>Tiers</a>
       <a href="docs.html">Docs</a>
       <span id="user-chip" class="user-chip" hidden></span>
       <button id="btn-login" class="btn btn-primary" type="button">Sign in</button>
@@ -56,7 +56,8 @@
           gets DHCP, DNS, TCP and UDP to the public internet. Your sessions also share a private
           network, so a browser tab can reach a machine you run elsewhere.
         </p>
-        <p class="muted">relaynet is in an invite-only beta. Sign in, then redeem your invite code. By signing in you agree to the <a href="terms.html">Terms</a> and <a href="acceptable-use.html">Acceptable Use Policy</a>.</p>
+        <p class="muted" data-hosted hidden>relaynet is in an invite-only beta. Sign in, then redeem your invite code. By signing in you agree to the <a href="terms.html">Terms</a> and <a href="acceptable-use.html">Acceptable Use Policy</a>.</p>
+        <p class="muted" data-self-hosted hidden>This is a self-hosted relay. Sign in, or create an account if the operator allows it.</p>
         <div class="hero-actions">
           <button class="btn btn-primary btn-lg" type="button" data-action="login">Sign in</button>
           <a class="btn btn-lg" href="#uses">See what it is for</a>
@@ -126,11 +127,11 @@
       <div class="grid three">
         <div class="card">
           <h3>1. Get a token</h3>
-          <p>Sign in with your invite and create an API token from your dashboard.</p>
+          <p>Sign in and create an API token from your dashboard.</p>
         </div>
         <div class="card">
           <h3>2. Open the WebSocket</h3>
-          <p>Connect to <code>wss://relay.relaynet.network</code> with the token in the subprotocol
+          <p>Connect to <code class="relay-ws">wss://relay.relaynet.network</code> with the token in the subprotocol
             list. Ethernet frames go in, Ethernet frames come out.</p>
         </div>
         <div class="card">
@@ -143,7 +144,7 @@
 
       <div class="card">
         <h3>Connecting from a page</h3>
-        <pre><code>const ws = new WebSocket("wss://relay.relaynet.network", [
+        <pre><code>const ws = new WebSocket("<span class="relay-ws">wss://relay.relaynet.network</span>", [
   "relay.v1",
   "relay.token." + token,   // an API token from your dashboard
 ]);
@@ -152,7 +153,7 @@
           entry. Non-browser clients may send <code>Authorization: Bearer</code> instead.</p>
       </div>
 
-      <div id="tiers" class="grid">
+      <div id="tiers" class="grid" data-hosted hidden>
         <div class="card">
           <h3>Beta account</h3>
           <ul class="plain">
@@ -179,14 +180,14 @@
 
       <div class="card" id="card-invite" hidden>
         <h3>Redeem your invite</h3>
-        <p>relaynet is in an invite-only beta. Enter the code you were sent to activate your account.</p>
+        <p>This relay is invite-only. Enter the code you were sent to activate your account.</p>
         <form id="invite-form" class="inline-form">
           <label>Invite code <input name="code" type="text" maxlength="32" placeholder="RLY-XXXX-XXXX-XXXX"
             autocomplete="off" spellcheck="false" required></label>
           <button class="btn btn-primary" type="submit">Activate</button>
         </form>
-        <p class="muted">No code? Ask the person who told you about relaynet, or write to
-          <a href="mailto:support@relaynet.network">support@relaynet.network</a>.</p>
+        <p class="muted">No code? Ask the person who told you about this relay<span data-hosted hidden>, or write to
+          <a href="mailto:support@relaynet.network">support@relaynet.network</a></span>.</p>
       </div>
 
       <div class="card" id="card-org" hidden>
@@ -327,8 +328,8 @@
 
   <footer class="footer">
     <span><a href="docs.html">Docs</a> · <a href="docs.md">Docs as Markdown</a> · <a href="llms.txt">llms.txt</a></span>
-    <span><a href="terms.html">Terms</a> · <a href="acceptable-use.html">Acceptable use</a> · <a href="privacy.html">Privacy</a> · <a href="https://status.relaynet.network" rel="noopener">Status</a></span>
-    <span>Relay endpoint: <code>wss://relay.relaynet.network</code></span>
+    <span data-hosted hidden><a href="terms.html">Terms</a> · <a href="acceptable-use.html">Acceptable use</a> · <a href="privacy.html">Privacy</a> · <a href="https://status.relaynet.network" rel="noopener">Status</a></span>
+    <span>Relay endpoint: <code class="relay-ws">wss://relay.relaynet.network</code></span>
   </footer>
 
   <!-- One-time token reveal -->

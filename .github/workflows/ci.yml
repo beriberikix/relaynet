@@ -62,3 +62,24 @@ jobs:
           done
           docker logs relay
           exit 1
+
+  # The quick start: `docker compose up` with no configuration, then an
+  # account from sign-up, an API token and a session through the relay.
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: docker compose up
+        run: docker compose up -d --build --wait --wait-timeout 180
+      - name: Sign up, create a token, open a session
+        run: deploy/compose-check.sh
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color | tail -100
+      - name: docker compose down
+        if: always()
+        run: docker compose down -v

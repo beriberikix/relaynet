@@ -44,7 +44,7 @@ and refuses to start if the restore fails. Credentials are the Fly secrets
 `LITESTREAM_ACCESS_KEY_ID` and `LITESTREAM_SECRET_ACCESS_KEY`, and the R2
 endpoint (`https://<account id>.r2.cloudflarestorage.com`) is the secret
 `LITESTREAM_ENDPOINT`. Set
-`LITESTREAM_ENABLED=false` to run the relay without it (local experiments).
+Litestream runs when `LITESTREAM_BUCKET` is set (`LITESTREAM_ENABLED=auto`, the default); `true` refuses to start without a bucket (relaynet.network sets it), `false` never runs it.
 Restore procedures are in the operator runbooks in the private relaynet-private repository.
 
 ## Operator panel

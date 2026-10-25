@@ -7,11 +7,28 @@ Ethernet frames over a WebSocket and get IPv4 TCP and UDP to the internet;
 sessions of one account share a private network. The docs page
 (`web/docs/docs.md`) lists use cases and when to use something else.
 
+## Run your own
+
+```sh
+git clone https://github.com/beriberikix/relaynet
+cd relaynet && docker compose up
+```
+
+Then open http://localhost and create an account (or sign in as `admin` with
+the password printed once in `docker compose logs relay`); the operator panel
+is on http://127.0.0.1:8001. No configuration or third-party accounts are
+needed. `compose.yaml` lists the optional settings: a domain for HTTPS,
+single sign-on with any OpenID Connect provider, S3 backups.
+
+## This repository
+
 The relay process is
 [rootlessRelay](https://github.com/beriberikix/rootlessRelay) in hosted mode,
 pinned as a dependency; this repo holds everything around it.
 
 ```
+compose.yaml  quick start: the relay and the site on one machine
+deploy/  the site's container (Caddy) for compose and other hosts
 relay/   container image + Fly.io config for the relay process
 web/     browser frontend (Cloudflare Worker, static assets)
 client/  relaynet.js, the reconnecting client helper (npm: relaynet)

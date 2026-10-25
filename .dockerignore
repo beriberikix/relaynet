@@ -1,0 +1,9 @@
+# Build context for deploy/caddy/Dockerfile (the repository root): only web/
+# and deploy/ are used.
+**/node_modules
+.git
+web/public/vendor
+relay/
+infra/
+client/
+docs/

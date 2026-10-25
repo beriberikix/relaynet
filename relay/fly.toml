@@ -71,6 +71,8 @@ kill_timeout = 15
   METRICS_MERGE_URLS = "http://127.0.0.1:9090/metrics"
 
   # Litestream target: R2 bucket and prefix.
+  # Required here: refuse to start without backups rather than run unreplicated.
+  LITESTREAM_ENABLED = "true"
   LITESTREAM_BUCKET = "relaynet-backups"
   LITESTREAM_REPLICA_PATH = "prod"
 

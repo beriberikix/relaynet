@@ -1,0 +1,45 @@
+# relaynet site and relay on one origin. Environment (set by entrypoint.sh):
+#   RELAYNET_SITE   site address: ":80" for http://localhost, or a domain
+#                   (Caddy then gets a certificate and serves HTTPS)
+#   RELAY_UPSTREAM  the relay's public listener, e.g. relay:8086
+#   RELAYNET_CSP    Content-Security-Policy for the site
+{
+	admin off
+}
+
+{$RELAYNET_SITE} {
+	# The relay: its API, health check and WebSocket sessions (an upgrade on
+	# any path). Caddy sets X-Forwarded-For; the relay trusts it from the
+	# private network (TRUSTED_PROXY_CIDRS).
+	@relay {
+		path /api/* /healthz
+	}
+	# Header values are case-insensitive here; clients send "websocket" or
+	# "WebSocket", "Upgrade" or "upgrade".
+	@upgrade header_regexp Upgrade (?i)^websocket$
+	handle @upgrade {
+		reverse_proxy {$RELAY_UPSTREAM}
+	}
+	handle @relay {
+		reverse_proxy {$RELAY_UPSTREAM}
+	}
+
+	# The site: the same headers as web/public/_headers on Cloudflare.
+	handle {
+		root * /srv
+		encode gzip
+		header {
+			Content-Security-Policy "{$RELAYNET_CSP}"
+			X-Content-Type-Options nosniff
+			X-Frame-Options DENY
+			Referrer-Policy strict-origin-when-cross-origin
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+			Cache-Control no-cache
+		}
+		@markdown path /docs.md
+		header @markdown Content-Type "text/markdown; charset=utf-8"
+		@llms path /llms.txt
+		header @llms Content-Type "text/plain; charset=utf-8"
+		file_server
+	}
+}
