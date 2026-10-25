@@ -4,7 +4,7 @@ updates:
   # so this covers the container base image, the Workers tooling and the
   # workflows' actions (pinned by commit; Dependabot updates hash and comment).
   - package-ecosystem: docker
-    directory: /relay
+    directories: ["/relay", "/deploy/caddy"]
     schedule:
       interval: weekly
     # Stay on the Node LTS line; move majors deliberately (odd majors never

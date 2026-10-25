@@ -2,6 +2,8 @@
 // an OIDC client id is meant to ship to browsers. Deployments replace this
 // file (the docker compose image writes it from environment variables).
 window.RELAYNET_CONFIG = {
+  // Shows relaynet.network's own text: the beta, tiers, terms and support.
+  hostedService: true,
   // The relay's origin. Empty: this page's origin (a proxy serves both).
   relayUrl: "https://relay.relaynet.network",
   // Any OpenID Connect provider (here Auth0), or null for relay accounts

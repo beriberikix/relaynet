@@ -1,0 +1,75 @@
+# relaynet on one machine.
+#
+#   docker compose up
+#
+# then open http://localhost. The first start prints an operator account's
+# password once (docker compose logs relay); anyone can also create an
+# account from the sign-in panel. The operator panel is on
+# http://127.0.0.1:8001, reachable only from this machine.
+#
+# Nothing needs configuring for that. For a server with a domain, HTTPS,
+# backups or single sign-on, set the variables below in a .env file next to
+# this one (see docs/self-hosting/).
+
+name: relaynet
+
+services:
+  relay:
+    build: relay
+    image: relaynet-relay:local
+    restart: unless-stopped
+    environment:
+      # Accounts: username and password, with sign-up open by default.
+      USER_PASSWORD_LOGIN: "true"
+      USER_SIGNUP: ${USER_SIGNUP:-true}
+      SIGNUP_MODE: ${SIGNUP_MODE:-open}
+      ANON_ENABLED: "false"
+      # The browser origin(s) allowed to call the relay; empty allows any
+      # (fine on localhost; set it to https://<your domain> on a server).
+      ALLOWED_ORIGINS: ${RELAYNET_ORIGIN:-}
+      # Caddy, on the compose network, is the only client of the public port.
+      TRUSTED_PROXY_CIDRS: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      ADMIN_BIND_ADDRESS: 0.0.0.0
+      # Optional: single sign-on with any OpenID Connect provider. The relay
+      # verifies the provider's access tokens.
+      JWT_ISSUER: ${OIDC_ISSUER:-}
+      JWT_AUDIENCE: ${OIDC_AUDIENCE:-}
+      JWT_JWKS_URL: ${OIDC_JWKS_URL:-}
+      JWT_USERNAME_CLAIM: ${OIDC_USERNAME_CLAIM:-email}
+      JWT_VERIFIED_CLAIM: ${OIDC_VERIFIED_CLAIM:-}
+      # Optional: continuous backups to S3-compatible storage (Litestream).
+      LITESTREAM_BUCKET: ${S3_BUCKET:-}
+      LITESTREAM_REPLICA_PATH: ${S3_PATH:-relaynet}
+      LITESTREAM_ENDPOINT: ${S3_ENDPOINT:-}
+      LITESTREAM_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      LITESTREAM_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+    volumes:
+      - relay-data:/data
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-8001}:8001"
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/caddy/Dockerfile
+    image: relaynet-web:local
+    restart: unless-stopped
+    depends_on:
+      relay:
+        condition: service_healthy
+    environment:
+      # A domain name here makes Caddy serve HTTPS with an automatic
+      # certificate (ports 80 and 443 must reach this machine).
+      RELAYNET_DOMAIN: ${RELAYNET_DOMAIN:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
+    volumes:
+      - web-data:/data
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+
+volumes:
+  relay-data:
+  web-data:
