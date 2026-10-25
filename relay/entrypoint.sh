@@ -8,6 +8,7 @@ set -eu
 
 DB="${ADMIN_AUTH_DB_PATH:-/data/relay.sqlite}"
 export ADMIN_AUTH_DB_PATH="$DB"  # litestream.yml reads it
+export LITESTREAM_REGION="${LITESTREAM_REGION:-auto}"  # R2 takes "auto"; AWS needs its region
 CONFIG="${LITESTREAM_CONFIG:-/etc/litestream.yml}"
 
 case "${LITESTREAM_ENABLED:-auto}" in

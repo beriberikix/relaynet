@@ -20,5 +20,5 @@ dbs:
       bucket: ${LITESTREAM_BUCKET}
       path: ${LITESTREAM_REPLICA_PATH}
       endpoint: ${LITESTREAM_ENDPOINT}
-      region: auto
+      region: ${LITESTREAM_REGION}
       sync-interval: 1s

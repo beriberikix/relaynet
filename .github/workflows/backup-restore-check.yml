@@ -33,6 +33,7 @@ jobs:
           LITESTREAM_ACCESS_KEY_ID: ${{ secrets.R2_RO_ACCESS_KEY_ID }}
           LITESTREAM_SECRET_ACCESS_KEY: ${{ secrets.R2_RO_SECRET_ACCESS_KEY }}
           LITESTREAM_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          LITESTREAM_REGION: auto
           LITESTREAM_BUCKET: relaynet-backups
           LITESTREAM_REPLICA_PATH: prod
           ADMIN_AUTH_DB_PATH: /data/relay.sqlite
