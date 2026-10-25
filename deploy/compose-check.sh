@@ -5,7 +5,15 @@
 # lookup). Used by CI; run it locally after `docker compose up -d`.
 #
 #   BASE=http://localhost ADMIN=http://127.0.0.1:8001 deploy/compose-check.sh
+#
+# INSECURE=1 accepts an untrusted certificate (RELAYNET_DOMAIN=localhost uses
+# Caddy's local CA).
 set -eu
+
+if [ "${INSECURE:-0}" = 1 ]; then
+  curl() { command curl -k "$@"; }
+  export NODE_TLS_REJECT_UNAUTHORIZED=0
+fi
 
 BASE="${BASE:-http://localhost}"
 ADMIN="${ADMIN:-http://127.0.0.1:8001}"

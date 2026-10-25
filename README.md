@@ -18,7 +18,9 @@ Then open http://localhost and create an account (or sign in as `admin` with
 the password printed once in `docker compose logs relay`); the operator panel
 is on http://127.0.0.1:8001. No configuration or third-party accounts are
 needed. `compose.yaml` lists the optional settings: a domain for HTTPS,
-single sign-on with any OpenID Connect provider, S3 backups.
+single sign-on with any OpenID Connect provider, S3 backups. The guides are
+in [`docs/self-hosting/`](docs/self-hosting/): quick start, single server,
+single sign-on, and how relaynet.network itself is deployed.
 
 ## This repository
 
