@@ -138,7 +138,7 @@ The relay treats every frame from a VM as hostile.
 
 | Threat | Control | Evidence |
 |---|---|---|
-| XSS turning into relay access | API data inserted only as text nodes; CSP `script-src 'self'` with the Auth0 SDK served from the site; `frame-ancestors 'none'` | WB-5 (#137), WB-6 |
+| XSS turning into relay access | API data inserted only as text nodes; CSP `script-src 'self'` with the OIDC client served from the site; `frame-ancestors 'none'` | WB-5 (#137), WB-6 |
 | Token theft after an XSS or a bad extension | Refresh tokens rotate with reuse detection, 7 days absolute and 1 day idle; relay access tokens are short-lived | WB-1 (mitigated; cache stays in `localStorage`) |
 | Invitation token leaking through logs or history | Token in the URL fragment, removed from the address bar at once, kept only in this tab's session storage | WB-3 (#130) |
 | Being joined to an org by someone else's link | Join or Ignore step before accepting | WB-4 (#140) |
