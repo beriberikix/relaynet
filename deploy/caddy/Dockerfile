@@ -14,7 +14,7 @@ RUN npm ci --no-audit --no-fund --ignore-scripts
 COPY web/public ./public
 RUN npm run vendor && rm -f public/_headers
 
-FROM caddy:2.11.6-alpine@sha256:d44355d3c2149dc580ce2cac735955d1c08d3d00882c30489c241aa51a5c10d9
+FROM caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
 COPY --from=site /web/public /srv
 COPY deploy/caddy/Caddyfile /etc/caddy/Caddyfile
 COPY deploy/caddy/entrypoint.sh /usr/local/bin/relaynet-web
