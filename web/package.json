@@ -10,7 +10,7 @@
     "deploy": "npm run vendor && wrangler deploy"
   },
   "devDependencies": {
-    "wrangler": "^4.151.2",
+    "wrangler": "^4.152.0",
     "oidc-client-ts": "3.5.0"
   },
   "type": "module"
