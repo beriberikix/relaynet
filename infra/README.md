@@ -99,8 +99,11 @@ To change the claim name, change it in the action and in
 secret restarts the relay. Unsetting the secret is the rollback; the claim is
 harmless to leave in tokens.
 
-Users signing in through Auth0 are created in the relay on first connection
-with the `user` tier. Operators can change tiers or ban them from the panel.
+Users signing in through Auth0 are created in the relay on first sign-in
+with the `user` tier. Production sets `SIGNUP_MODE = "invite"`, so a new
+account starts pending and cannot connect until it redeems an invite code
+(created in the panel under Invites). Operators can change tiers or ban
+users from the panel.
 
 ## Cloudflare (DNS, edge protection)
 
@@ -113,10 +116,12 @@ Done on 2026-10-14 with the Cloudflare CLI (`cf`). Zone `relaynet.network`:
 | SSL mode | Full (strict); Fly holds a Let's Encrypt cert for the host |
 
 The relay reads the client address from `CF-Connecting-IP`
-(`CLIENT_IP_HEADER` in `relay/fly.toml`). Clients that bypass Cloudflare by
-connecting to `relaynet.fly.dev` directly all appear as one address and share
-the per-address limits, which is acceptable; the public URL is the Cloudflare
-one.
+(`CLIENT_IP_HEADER` in `relay/fly.toml`), but believes it only when the
+connecting edge (`PEER_IP_HEADER = "fly-client-ip"`) is in Cloudflare's
+published ranges (`TRUSTED_PROXY_CIDRS`). Clients that bypass Cloudflare by
+connecting to `relaynet.fly.dev` directly are attributed to their real
+address. Refresh `TRUSTED_PROXY_CIDRS` from https://www.cloudflare.com/ips/
+when Cloudflare changes its ranges.
 
 The anonymous demo tier was removed on 2026-10-14 for the invite-only beta
 (`ANON_ENABLED=false`; the Turnstile widget, its secret, the anon token secret
@@ -163,3 +168,56 @@ Litestream's metrics are appended to the relay's `/metrics`
 (`METRICS_MERGE_URLS`; Fly scrapes one endpoint per app) and alert on upload
 or sync errors, a full disk, missing metrics and no upload in 26 h. The
 weekly restore check still proves the backups restore.
+
+## Subdirectories & Boundaries
+
+Each directory below is an operational tool or configuration for the
+services around the relay; none is imported by the relay, web or client
+code.
+
+- grafana: [./grafana/README.md](./grafana/README.md) - `provision.py`
+  idempotently provisions the Grafana Cloud alert folder, contact point,
+  notification policy, alert rules and the "relaynet relay" dashboard.
+- legal: [./legal/README.md](./legal/README.md) - Terms, Acceptable Use and
+  Privacy Markdown sources; `build.py` renders them to `web/public/*.html`.
+- load: [./load/README.md](./load/README.md) - `load.mjs` load generator
+  (many sessions with DHCP, periodic DNS and optional HTTP downloads through
+  the relay).
+- probe: [./probe/README.md](./probe/README.md) - `probe.mjs` end-to-end
+  probe (API token auth, DHCP lease, DNS via the relay), run by GitHub
+  Actions after relay deploys and on demand.
+- probe-worker: [./probe-worker/README.md](./probe-worker/README.md) -
+  Cloudflare Worker `relaynet-probe` running the same probe every 5 minutes
+  and reporting to the Better Stack heartbeat.
+- staging: [./staging/README.md](./staging/README.md) - `tmp-operator.js`
+  creates or removes a temporary operator account in a relay database.
+- log-shipper (configuration only, `fly.toml`): Fly app `relaynet-logs`
+  running a digest-pinned `fly-log-shipper` image that ships the relay's
+  logs to Grafana Cloud Loki; deployed by
+  `.github/workflows/deploy-log-shipper.yml`.
+
+## Global Invariants
+
+- No credentials are committed here. Local operator credentials live in the
+  gitignored `infra/.env.local`; deploy-time secrets live in GitHub Actions
+  secrets, Fly secrets and the Worker's secrets.
+- `probe/probe.mjs` and `probe-worker/src/index.ts` implement the same check
+  and must stay in step; they use different MAC addresses so their sessions
+  are distinguishable.
+
+## Global Side Effects
+
+- These tools act on external services: the hosted relay (probe, load,
+  staging), Grafana Cloud (grafana, log-shipper), Cloudflare Workers and
+  Better Stack (probe-worker), and generated files in `web/public/` (legal).
+
+## Verification
+
+No test suite covers this directory. Syntax checks:
+
+```sh
+node --check infra/probe/probe.mjs
+node --check infra/load/load.mjs
+node --check infra/staging/tmp-operator.js
+python3 -c "import ast,sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]" infra/grafana/provision.py infra/legal/build.py
+```
