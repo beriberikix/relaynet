@@ -46,7 +46,7 @@ kill_timeout = 15
   SIGNUP_MODE = "invite"
 
   # The admin port is not in [http_service], so it is never public. Reach it
-  # with `fly proxy 8001:8001`, which lands on plain HTTP at localhost.
+  # with `fly proxy 8002:8001`, which lands on plain HTTP at localhost:8002.
   # Fly's private network is IPv6-only, so the admin server must bind "::"
   # (dual-stack); the image default of 0.0.0.0 is unreachable from the tunnel
   # and from the metrics scraper.
