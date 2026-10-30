@@ -1,24 +1,27 @@
 # relaynet Terms of Service
 
-_Effective October 14, 2026._
+_Effective October 30, 2026._
 
 relaynet ("the service") is a hosted network relay that connects programs,
 such as virtual machines and other software running in a web browser, to
 the internet over a WebSocket. It is operated by Jonathan Beri ("I", "me"), an
-individual based in California, United States. By creating an account or using the
-service you agree to these terms and to the [Acceptable Use Policy](acceptable-use)
+individual based in California, United States. By creating an account, or by
+using the service with or without one (for example through a demo page that
+connects to relaynet for you), you agree to these terms and to the [Acceptable Use Policy](acceptable-use)
 and [Privacy Policy](privacy).
 
 ## The beta
 
-relaynet is in an invite-only beta. It is offered free of charge, as is, with
-no uptime commitment. Features, limits and these terms may change; material
+relaynet is in beta. It is offered free of charge, as is, with no uptime
+commitment. Features, limits and these terms may change; material
 changes will be announced on the site or by email at least 14 days before
 they apply, except where a change is needed to stop abuse or comply with law.
 
 ## Your account
 
-- You need an invite code to activate an account, and you must be at least 16.
+- You must be at least 16 to create an account or use the service.
+- New accounts are on the free tier. Some accounts are on a beta tier with
+  higher limits, set up by invitation.
 - You are responsible for activity under your account and its API tokens.
   Keep tokens secret; revoke any you believe are exposed.
 - One person per account. Do not share accounts or resell access.
@@ -31,6 +34,20 @@ every user; I enforce the policy strictly.
 
 Each account has limits (bandwidth, sessions, connections, monthly data)
 shown on the dashboard. Exceeding them closes sessions or refuses new ones.
+
+## Anonymous use
+
+Demo pages may connect to relaynet without an account, using short-lived
+anonymous tokens. Anonymous use is limited more tightly than an account
+(fewer ports, lower bandwidth, short sessions, a daily data allowance per
+address), and the Acceptable Use Policy applies to it in full.
+
+## The free tiers' monthly budget
+
+Free accounts and anonymous use share a monthly bandwidth budget. When most
+of it is used, new free and anonymous sessions may be slowed. When it is used
+up, free and anonymous sessions may be closed and refused until the first day
+of the next month (UTC). Beta-tier accounts are not affected by the budget.
 
 ## Changes to the service
 

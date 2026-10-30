@@ -6,7 +6,7 @@
 > WebSocket (subprotocol `relay.v1`, endpoint `wss://relay.relaynet.network/`);
 > the relay answers DHCP and ARP and forwards TCP and UDP to the internet.
 > Used for browser VMs, SSH clients, USB/IP, debug protocols, KVM consoles and
-> custom or peer-to-peer protocols. Access needs an API token (invite-only beta).
+> custom or peer-to-peer protocols. Access needs an API token from a free account, or a short-lived anonymous token for demos.
 
 Key facts: each binary WebSocket message is one Ethernet II frame (no FCS);
 the token goes in the subprotocol list as `relay.token.<token>` (browsers)

@@ -17,6 +17,12 @@ Sign-in is decided at runtime: OIDC with any provider when `config.js` has an
 password) when the relay's `GET /api/auth/config` says `passwordLogin`. With
 both, the sign-in panel offers both.
 
+The same `GET /api/auth/config` response carries the relay's monthly budget
+for the free and anonymous tiers: `budget` (`"open"`, `"throttled"` or
+`"paused"`) and `pausedUntil` (`"YYYY-MM-DD"`, the first day of the next UTC
+month, or `null`). When `budget` is `"paused"`, `app.js` shows the
+`#budget-banner` above the page for signed-in and signed-out visitors alike.
+
 | File | Purpose |
 |---|---|
 | `index.html` | Landing page (signed out) and dashboard (signed in). |
@@ -100,6 +106,8 @@ in the JSON body.
 
 - API data becomes DOM only through text nodes (`el`) or `textContent`.
   `innerHTML` is never used.
+- The budget banner's text is built from fixed strings and a date parsed from
+  `pausedUntil`, set with `textContent`.
 - On an OIDC `?error=` return, only the fixed `SIGN_IN_ERRORS` text is shown,
   never `error_description`.
 - `captureInvite` removes the invite token from the address bar at once
