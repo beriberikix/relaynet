@@ -9,10 +9,23 @@
 //
 // One account and one client IP open every session, so the target needs its
 // per-account and per-IP caps raised first (see "Load test" in the operator runbooks, relaynet-private).
+// With ANON=1 each session gets its own anonymous token instead (no
+// RELAY_TOKEN), as demo visitors do; the target then needs its anonymous
+// per-address limits raised (infra/load/README.md, "B1").
 // Prints a status line every 10 s and a summary at the end.
 
 const RELAY_URL = process.env.RELAY_URL || "wss://relay-staging.relaynet.network/";
 const TOKEN = process.env.RELAY_TOKEN;
+const ANON = process.env.ANON === "1";
+// Parallel downloads in each downloading session (up to the tier's
+// maxTcpConnections), to load one session's TCP buffers.
+const CONNS_PER_SESSION = Number(process.env.CONNS_PER_SESSION || 1);
+// The relay's HTTP origin, for its anonymous token endpoint.
+const RELAY_HTTP = (() => {
+  const url = new URL(RELAY_URL);
+  url.protocol = url.protocol === "ws:" ? "http:" : "https:";
+  return url.origin;
+})();
 const SESSIONS = Number(process.env.SESSIONS || 50);
 const DOWNLOADERS = Number(process.env.DOWNLOADERS || 0);
 const RAMP_PER_SEC = Number(process.env.RAMP_PER_SEC || 10);
@@ -24,9 +37,18 @@ const DOWNLOAD_PATH = process.env.DOWNLOAD_PATH || "/__down?bytes=2000000";
 // trip between the relay and the "VM" (simulates a distant user).
 const ACK_DELAY_MS = Number(process.env.ACK_DELAY_MS || 0);
 
-if (!TOKEN) {
-  console.error("load: RELAY_TOKEN is required");
+if (!TOKEN && !ANON) {
+  console.error("load: RELAY_TOKEN is required (or ANON=1 for anonymous tokens)");
   process.exit(1);
+}
+
+async function anonToken() {
+  const res = await fetch(`${RELAY_HTTP}/api/anon/token`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.token) throw new Error(body.error || `HTTP ${res.status}`);
+  return body.token;
 }
 
 // --- packet helpers ---------------------------------------------------------
@@ -140,7 +162,8 @@ function dhcpOption(payload, code) {
 // --- stats -----------------------------------------------------------------
 
 const stats = {
-  opened: 0, leased: 0, open: 0, connectFailed: 0, closedEarly: 0,
+  opened: 0, leased: 0, open: 0, peakOpen: 0, connectFailed: 0, closedEarly: 0,
+  tokenFailed: 0, tokenErrors: new Map(), wsBytesIn: 0, wsBytesOut: 0,
   dnsSent: 0, dnsOk: 0, dnsLatency: [],
   downloadsOk: 0, downloadsFailed: 0, bytesDown: 0, outOfOrder: 0, downloadMs: [],
   closeCodes: new Map(),
@@ -156,16 +179,30 @@ const pct = (arr, p) => {
 let stopping = false;
 const sessions = [];
 
-function startSession(index, downloader) {
+async function startSession(index, downloader) {
   const mac = Buffer.from([0x02, 0x6c, 0x6f, (index >> 8) & 0xff, index & 0xff, 0x01]);
-  const s = { ws: null, lease: null, pendingDns: new Map(), tcp: null, timers: [] };
+  const s = { ws: null, lease: null, pendingDns: new Map(), conns: new Map(), timers: [] };
+  let token = TOKEN;
+  if (ANON) {
+    try {
+      token = await anonToken();
+    } catch (error) {
+      stats.tokenFailed += 1;
+      stats.tokenErrors.set(error.message, (stats.tokenErrors.get(error.message) || 0) + 1);
+      return;
+    }
+  }
   sessions.push(s);
-  const ws = new WebSocket(RELAY_URL, ["relay.v1", `relay.token.${TOKEN}`]);
+  const ws = new WebSocket(RELAY_URL, ["relay.v1", `relay.token.${token}`]);
   ws.binaryType = "arraybuffer";
   s.ws = ws;
   let opened = false;
 
-  const send = (frame) => { if (ws.readyState === 1) ws.send(frame); };
+  const send = (frame) => {
+    if (ws.readyState !== 1) return;
+    stats.wsBytesOut += frame.length;
+    ws.send(frame);
+  };
   const sendUdp = (dstIP, srcPort, dstPort, payload) => send(ipv4Frame({
     srcMac: mac, dstMac: s.lease.gatewayMac, srcIP: s.lease.ip, dstIP, proto: 17, body: udpBody(srcPort, dstPort, payload),
   }));
@@ -197,18 +234,20 @@ function startSession(index, downloader) {
     });
   }
 
-  async function downloadLoop() {
-    let srcPort = 10000 + ((index * 37) % 40000);
+  // Each parallel loop k keeps to its own stretch of source ports.
+  async function downloadLoop(k = 0) {
+    const base = 10000 + ((index * 37 + k * 1009) % 40000);
+    let srcPort = base;
     while (!stopping && ws.readyState === 1) {
       const msg = await resolve(DOWNLOAD_HOST);
       const dstIP = msg && firstA(msg);
       if (!dstIP) { stats.downloadsFailed += 1; await sleep(1000); continue; }
-      srcPort = srcPort >= 60000 ? 10000 : srcPort + 1;
+      srcPort = srcPort >= base + 1000 ? base : srcPort + 1;
       const downloadStarted = Date.now();
       const ok = await new Promise((done) => {
         const c = { dstIP, srcPort, seq: Math.floor(Math.random() * 2 ** 31), ack: 0, state: "syn", got: 0, done };
-        c.timer = setTimeout(() => { s.tcp = null; done(false); }, 60000);
-        s.tcp = c;
+        c.timer = setTimeout(() => { s.conns.delete(srcPort); done(false); }, 60000);
+        s.conns.set(srcPort, c);
         sendTcp(c, SYN);
         c.seq += 1;
       });
@@ -217,13 +256,13 @@ function startSession(index, downloader) {
   }
 
   function onTcp(frame, ihl) {
-    const c = s.tcp;
     const t = 14 + ihl;
-    if (!c || frame.readUInt16BE(t + 2) !== c.srcPort) return;
+    const c = s.conns.get(frame.readUInt16BE(t + 2));
+    if (!c) return;
     const flags = frame[t + 13];
     const seq = frame.readUInt32BE(t + 4);
     const payload = frame.subarray(t + (frame[t + 12] >> 4) * 4, 14 + frame.readUInt16BE(16));
-    const finish = (ok) => { clearTimeout(c.timer); s.tcp = null; c.done(ok); };
+    const finish = (ok) => { clearTimeout(c.timer); s.conns.delete(c.srcPort); c.done(ok); };
     if (flags & RST) { finish(c.state === "fin"); return; }
     if (c.state === "syn" && (flags & (SYN | ACK)) === (SYN | ACK)) {
       c.ack = (seq + 1) >>> 0;
@@ -257,6 +296,7 @@ function startSession(index, downloader) {
     opened = true;
     stats.opened += 1;
     stats.open += 1;
+    stats.peakOpen = Math.max(stats.peakOpen, stats.open);
     send(ipv4Frame({
       srcMac: mac, dstMac: BROADCAST, srcIP: "0.0.0.0", dstIP: "255.255.255.255", proto: 17,
       body: udpBody(68, 67, dhcpDiscover(mac, 0x10000000 + index)),
@@ -264,6 +304,7 @@ function startSession(index, downloader) {
   };
   ws.onmessage = (event) => {
     const frame = Buffer.from(event.data);
+    stats.wsBytesIn += frame.length;
     if (frame.length < 34 || frame.readUInt16BE(12) !== 0x0800) return;
     const ihl = (frame[14] & 0x0f) * 4;
     const proto = frame[23];
@@ -281,7 +322,7 @@ function startSession(index, downloader) {
       };
       stats.leased += 1;
       s.timers.push(setInterval(() => resolve("example.com"), DNS_INTERVAL_MS));
-      if (downloader) downloadLoop();
+      if (downloader) for (let k = 0; k < CONNS_PER_SESSION; k += 1) downloadLoop(k);
     } else if (srcPort === 53 && payload.length >= 12) {
       const handler = s.pendingDns.get(payload.readUInt16BE(0));
       if (handler) { s.pendingDns.delete(payload.readUInt16BE(0)); handler(payload); }
@@ -309,7 +350,7 @@ function report(label = "") {
   lastBytes = stats.bytesDown;
   console.log(
     `${label}t=${Math.round((Date.now() - started) / 1000)}s open=${stats.open} leased=${stats.leased} ` +
-    `connectFailed=${stats.connectFailed} closedEarly=${stats.closedEarly} ` +
+    `connectFailed=${stats.connectFailed} closedEarly=${stats.closedEarly} tokenFailed=${stats.tokenFailed} ` +
     `dns=${stats.dnsOk}/${stats.dnsSent} p50=${pct(stats.dnsLatency, 50)}ms p95=${pct(stats.dnsLatency, 95)}ms ` +
     `downloads=${stats.downloadsOk} ok/${stats.downloadsFailed} failed ${mbps} MiB/s ooo=${stats.outOfOrder}`,
   );
@@ -318,7 +359,7 @@ function report(label = "") {
 
 const reporter = setInterval(report, 10000);
 for (let i = 0; i < SESSIONS; i += 1) {
-  startSession(i, i < DOWNLOADERS);
+  startSession(i, i < DOWNLOADERS).catch((error) => console.error("session", i, error.message));
   await sleep(1000 / RAMP_PER_SEC);
 }
 console.log(`load: ramped ${SESSIONS} sessions in ${Math.round((Date.now() - started) / 1000)} s, holding ${HOLD_S} s`);
@@ -327,7 +368,14 @@ stopping = true;
 clearInterval(reporter);
 report("final ");
 if (stats.closeCodes.size) console.log("close codes:", Object.fromEntries(stats.closeCodes));
+if (stats.tokenErrors.size) console.log("token errors:", Object.fromEntries(stats.tokenErrors));
 console.log(`downloaded ${(stats.bytesDown / 1024 / 1024).toFixed(0)} MiB`);
+// What the relay meters (and Fly bills, roughly): every frame, both ways.
+const wsBytes = stats.wsBytesIn + stats.wsBytesOut;
+console.log(
+  `relayed ${(wsBytes / 1024 / 1024).toFixed(1)} MiB over the WebSockets ` +
+  `(${stats.opened ? (wsBytes / stats.opened / 1024).toFixed(0) : 0} KiB per session), peak open ${stats.peakOpen}`,
+);
 if (stats.downloadMs.length) {
   console.log(`download time p50=${pct(stats.downloadMs, 50)}ms p95=${pct(stats.downloadMs, 95)}ms (${stats.downloadMs.length} downloads)`);
 }
