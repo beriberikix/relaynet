@@ -6,7 +6,7 @@ name: sbom
 #   Fly builds it, scanned whole (Debian packages, Node, Litestream, the
 #   rootlessRelay package and its npm dependencies).
 # - web: the site's lockfile. The only third-party code the site serves is
-#   @auth0/auth0-spa-js (copied to public/vendor); the rest is build tooling.
+#   oidc-client-ts (copied to public/vendor); the rest is build tooling.
 #
 # The client library and the probe Worker have no runtime dependencies.
 # Kept as workflow artifacts for 90 days; re-run for any commit with
