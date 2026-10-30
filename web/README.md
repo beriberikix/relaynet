@@ -117,7 +117,7 @@ in the JSON body.
   invite) need two clicks within 4 seconds. Deleting the account requires
   typing the exact username.
 - `_headers`: `script-src 'self'` (no inline scripts or eval), and
-  `frame-ancestors 'none'`. `connect-src`, `frame-src` and `form-action` list
+  `frame-ancestors 'none'`. `connect-src` and `form-action` list
   only the relay and Auth0 origins. A provider or relay on another origin must
   be added there. `deploy-web.yml` checks that the live CSP has
   `script-src 'self';`.
