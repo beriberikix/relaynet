@@ -153,6 +153,51 @@ the default); `true` refuses to start without a bucket (relaynet.network sets
 it), `false` never runs it.
 Restore procedures are in the operator runbooks in the private relaynet-private repository.
 
+## Free tiers and the egress budget
+
+Both apps run the plan in `docs/design/open-front-door.md`:
+
+- **Anonymous tokens** (`ANON_ENABLED = "true"`) for the demos on
+  `https://beriberikix.github.io`, which is in `ALLOWED_ORIGINS`. The secret
+  `ANON_TOKEN_SECRET` must be set on each app (`fly secrets set -a <app>
+  ANON_TOKEN_SECRET="$(openssl rand -hex 32)"`); without it the relay keeps a
+  generated one on the volume, which changes if the volume is lost.
+- **Open sign-up** (`SIGNUP_MODE = "open"`): new Auth0 accounts are active on
+  the `free` tier (`JWT_DEFAULT_TIER`). Invited accounts keep `user`; an
+  operator moves an account between tiers in the panel.
+- **Tiers** (`TIERS_JSON`): `free` with every field set, and `free` and
+  `anon` at 128 KiB/s each way. The rate is low because `shared-cpu-1x`
+  throttles to about 6% of a CPU under sustained load (load test,
+  2026-10-30).
+- **Monthly egress budget** on `free` and `anon` (`BUDGET_TIERS`). It counts
+  every tier's bytes for the UTC month and stores them in the database:
+  - past `BUDGET_THROTTLE_BYTES` (production 300 GB, staging 50 MiB), new
+    sessions of those tiers start at 64 KiB/s;
+  - past `BUDGET_PAUSE_BYTES` (production 840 GB, staging 100 MiB), they are
+    closed with `1008 "free tier paused until <date>"` and refused until the
+    month resets, and `POST /api/anon/token` answers
+    `503 {"error":"free-tier-paused"}`.
+
+  `user` and `operator` sessions are never slowed or closed.
+
+The budget's state and override are on the operator panel's API, behind its
+sign-in (production: Auth0 SSO at https://admin.relaynet.network; staging:
+`fly proxy 8002:8001 -a relaynet-staging`, then `http://localhost:8002`).
+With the panel's session cookie (from the browser's developer tools):
+
+```sh
+curl -s -b 'admin.sid=<cookie>' https://admin.relaynet.network/api/budget
+curl -s -b 'admin.sid=<cookie>' -H 'X-Requested-With: relaynet-admin' \
+  -H 'Content-Type: application/json' -d '{"forced":"paused"}' \
+  https://admin.relaynet.network/api/budget
+```
+
+`{"forced":"paused"}` stops the free tiers now, `{"forced":"open"}` reopens
+them (for example after someone used up the budget on purpose), and
+`{"forced":null}` returns to the computed state. The override is stored and
+lasts until cleared or the month rolls over. Alerts on the budget come from
+Grafana (`infra/grafana`).
+
 ## Operator panel
 
 Production: https://admin.relaynet.network (`ADMIN_PUBLIC_HOST`; Auth0 SSO

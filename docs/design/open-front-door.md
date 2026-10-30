@@ -191,7 +191,8 @@ design, not by sponsorship.
     reasons from the token endpoint. No separate status endpoint.
 *   **`free` tier:**
     *   1 session, 30 minutes maximum, 5 minutes idle;
-    *   256 KiB/s each way;
+    *   128 KiB/s each way (lowered from 256 KiB/s after the load test; see
+        "Load test results");
     *   TCP 80 and 443, UDP 443;
     *   1 GiB a month.
 
@@ -456,7 +457,7 @@ retry".
 
 *   **`TIERS_JSON` defines `free` with every field set,** so nothing is
     inherited from `user`:
-    *   `uploadBps` and `downloadBps` 262144;
+    *   `uploadBps` and `downloadBps` 131072 (`anon` gets the same rates);
     *   `maxTcpConnections` 32, `synPerSec` 5, `dnsQps` 20, `maxUdpFlows` 32;
     *   `connectTimeoutMs` 10000;
     *   `allowedTcpPorts` [80, 443], `allowedUdpPorts` [443];
@@ -466,10 +467,10 @@ retry".
     *   `maxSessionsPerOwner` 1, `maxSessionsPerIP` 2;
     *   `quotaBytes` 1073741824, `quotaPeriod` "month".
 
-    `anon` keeps its built-in values.
-*   **Memory headroom.** `TCP_SEND_QUEUE_HIGH_WATER_BYTES` is lowered to a
-    value chosen in step B1. It applies to the whole relay process, so it also
-    affects `user` traffic.
+    `anon` keeps its other built-in values.
+*   **Memory headroom.** `TCP_SEND_QUEUE_HIGH_WATER_BYTES` stays at its
+    default (1 MiB): the load test peaked at 205 MiB of 1 GB, including one
+    session with 32 parallel connections.
 *   **Fly connection limits.** `[http_service.concurrency]` `hard_limit` goes
     from 260 to 300, and `soft_limit` to 260. Otherwise, with the pool full,
     Fly's proxy refuses connections before the relay can send "relay full".
@@ -761,10 +762,44 @@ The rest of the checklist is tracked in #83.
 | **Egress-IP abuse.** Scanning or brute-forcing from the relay's shared egress IP gets it blocklisted, which breaks every tier. | `free` and `anon` allow only TCP 80/443 and UDP 443, with SYN limits. The existing acceptable-use and abuse process applies. |
 | **Regional egress pricing.** Traffic from India, and possibly Africa, costs $0.12/GB, three times the blended $0.04/GB the thresholds assume. | The launch watch and B1 compare relay bytes with the invoice. Recompute the thresholds if the blended rate is higher. |
 | **The counter drifts from the bill.** Fly's metered egress may differ from relay bytes. | B1 and the launch watch reconcile them, with a 10% tolerance. |
-| **Memory at 240 sessions.** One machine with 1 GB, under a spike. | Tier connection caps, a lower `TCP_SEND_QUEUE_HIGH_WATER_BYTES`, and the B1 memory test. |
+| **CPU under a spike.** `shared-cpu-1x` throttles to about 6% of a CPU once its burst is spent; the load test then relayed about 1.4 MiB/s in total, and at 240 heavy sessions token requests failed (Cloudflare 520). | Free and anon capped at 128 KiB/s each way, so the throttled capacity is shared among more visitors; demo traffic (DHCP, DNS, a page) is light. Soft launch first, watching CPU. Moving to a dedicated CPU (`performance-1x`, about $31-33 a month) is the fallback, at the cost of the $20 target. Residual risk: a viral spike slows everyone. |
+| **Memory at 240 sessions.** One machine with 1 GB, under a spike. | Measured: 205 MiB peak (load test). Tier connection caps. |
 | **Single machine and SQLite file.** | Accepted, as today. Litestream backups and the restore check stay. |
 | **The fork release slips.** | Fall back to Alternative D's runbook, and keep anonymous access off until the release ships. |
 | **Fly doesn't allow a public egress relay.** | A launch gate (§9). If the answer is no, this design is void. |
+
+## Load test results (B1, 2026-10-30)
+
+Run against `relaynet-staging` (`0.7.0-hosted.15`, 1 GB, `shared-cpu-1x`)
+from one client, anonymous tokens, the budget out of reach, following
+`infra/load/README.md`:
+
+| Run | Sessions held | Relayed throughput | DNS p50 | Peak memory | Relay CPU |
+|---|---|---|---|---|---|
+| 60 sessions, 10 downloading | 60 | ~3.8 MiB/s | 137 ms | not sampled | within its burst |
+| 120 sessions, 20 downloading | 120 | 1.4 MiB/s, falling to 0.2 | 413 ms | 185 MiB | 6-8% after the burst |
+| 240 sessions, 40 downloading | 208 at most; 24 token requests got HTTP 520 | 0.1-1.4 MiB/s | 913 ms | 205 MiB | 6-8% |
+| 1 session, 32 connections | 1 | low (see below) | 130 ms | 162 MiB | ~7% |
+
+*   **Memory is not the limit.** 205 MiB at most, with no out-of-memory
+    restart (a restart between runs was staging's idle auto-stop, a clean
+    shutdown). `TCP_SEND_QUEUE_HIGH_WATER_BYTES` stays at its default.
+*   **CPU is.** `shared-cpu-1x` bursts, then is held to about 6% of a CPU.
+    Throttled, the relay moved about 1.4 MiB/s in total, and at 240 heavy
+    sessions it could not keep up with token requests.
+*   **Decision:** stay on `shared-cpu-1x` and cap `free` and `anon` at
+    128 KiB/s each way (risk table). The cap shares capacity rather than
+    adding it; the budget still bounds the bill.
+*   **Not completed:**
+    *   The "relay full" check did not trigger, because the pool never
+        reached 240 sessions.
+    *   The 32-connection run's downloads mostly failed in the test tool:
+        each of its 32 loops looks up DNS before every download and runs
+        into the anonymous tier's 20 queries a second. Memory was measured.
+    *   The comparison with Fly's Cost Explorer (relay bytes against
+        billed egress for 17:16-17:31 UTC, about 1.3 GB relayed) is done
+        the next day; the thresholds stay at 300 GB and 840 GB unless it
+        shows a different blended rate.
 
 ## Non-Functional Requirements
 
