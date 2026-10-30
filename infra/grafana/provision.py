@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Provision relaynet's Grafana Cloud alerting and dashboard. Idempotent.
 
-Reads GRAFANA_URL, GRAFANA_SA_TOKEN and ALERT_EMAIL from the environment
-(infra/.env.local). The data source "fly-relaynet" (Fly's managed Prometheus,
+Reads GRAFANA_URL, GRAFANA_SA_TOKEN, ALERT_EMAIL, NTFY_URL and NTFY_TOKEN from
+the environment (infra/.env.local). The data source "fly-relaynet" (Fly's managed Prometheus,
 read-only org token) must already exist; see infra/README.md.
 
     cd infra && set -a && . ./.env.local && set +a && python3 grafana/provision.py
@@ -18,6 +18,10 @@ import urllib.request
 URL = os.environ["GRAFANA_URL"].rstrip("/")
 TOKEN = os.environ["GRAFANA_SA_TOKEN"]
 EMAIL = os.environ["ALERT_EMAIL"]
+# Push alerts: an ntfy topic URL (with ?template=grafana) and a token that
+# may only publish to it.
+NTFY_URL = os.environ["NTFY_URL"]
+NTFY_TOKEN = os.environ["NTFY_TOKEN"]
 DS = "fly-relaynet"
 FOLDER_UID = "relaynet"
 HERE = pathlib.Path(__file__).parent
@@ -43,6 +47,9 @@ def api(method, path, body=None, ok=(200, 201, 202, 204)):
             return error.code, None
         return error.code, error.read().decode(errors="replace")[:300]
 
+
+BUDGET_RATIO = ('max(rootlessrelay_budget_bytes{app="relaynet"}) / '
+                'max(rootlessrelay_budget_threshold_bytes{app="relaynet",threshold="pause"})')
 
 # name, PromQL, comparison, threshold, pending period, severity, summary
 RULES = [
@@ -89,6 +96,20 @@ RULES = [
      'and on() (sum(count_over_time(litestream_db_size{app="relaynet"}[26h])) > 6000)',
      "lt", 1, "30m", "critical",
      "Litestream has uploaded nothing to R2 for 26 hours, although it snapshots daily. Check `fly logs` for litestream errors."),
+    # The egress budget for the free and anon tiers (production only; staging's
+    # test thresholds are crossed all the time). Ratios are of the pause threshold.
+    ("budget 50pct", BUDGET_RATIO, "gt", 0.5, "5m", "warning",
+     "Relay egress this month is past 50% of the pause threshold."),
+    ("budget 80pct", BUDGET_RATIO, "gt", 0.8, "5m", "warning",
+     "Relay egress this month is past 80% of the pause threshold. At 100% free and anon sessions pause until the 1st (UTC)."),
+    ("budget 100pct", BUDGET_RATIO, "gt", 1.0, "1m", "critical",
+     "Relay egress reached the pause threshold: free and anon sessions are closed and refused until the 1st (UTC). Override with POST /api/budget on the admin port."),
+    ("budget state changed", 'max(changes(rootlessrelay_budget_state{app="relaynet"}[10m]))',
+     "gt", 0, "0s", "critical",
+     "The budget changed state (open, throttled or paused). Check GET /api/auth/config."),
+    ("budget forced", 'max(rootlessrelay_budget_forced{app="relaynet"})',
+     "gt", 0, "0s", "warning",
+     "An operator override of the budget is set (POST /api/budget). It stays until cleared or the month ends."),
 ]
 
 
@@ -195,6 +216,23 @@ def main():
         status, _ = api("POST", "/api/v1/provisioning/contact-points", contact)
     print("contact point", status)
 
+    push = {
+        "uid": "relaynet-push",
+        "name": "relaynet push",
+        "type": "webhook",
+        "settings": {
+            "url": NTFY_URL,
+            "httpMethod": "POST",
+            "authorization_scheme": "Bearer",
+            "authorization_credentials": NTFY_TOKEN,
+        },
+        "disableResolveMessage": False,
+    }
+    status, _ = api("PUT", "/api/v1/provisioning/contact-points/relaynet-push", push)
+    if status == 404 or (isinstance(_, str) and "not found" in _):
+        status, _ = api("POST", "/api/v1/provisioning/contact-points", push)
+    print("push contact point", status)
+
     status, policy = api("GET", "/api/v1/provisioning/policies")
     policy = policy if isinstance(policy, dict) else {}
     policy["receiver"] = "relaynet email"
@@ -202,6 +240,11 @@ def main():
     policy["group_wait"] = "30s"
     policy["group_interval"] = "5m"
     policy["repeat_interval"] = "4h"
+    # Budget and critical alerts also go to the phone; continue keeps email.
+    routes = [r for r in policy.get("routes") or [] if r.get("receiver") != "relaynet push"]
+    for matcher in (["alertname", "=~", "budget.*"], ["severity", "=", "critical"]):
+        routes.append({"receiver": "relaynet push", "object_matchers": [matcher], "continue": True})
+    policy["routes"] = routes
     print("policy", api("PUT", "/api/v1/provisioning/policies", policy)[0])
 
     # Upsert rule by rule (the group endpoint rejects new rules wholesale).
