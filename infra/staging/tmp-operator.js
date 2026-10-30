@@ -27,7 +27,7 @@ const USER = "tmp-operator";
     else { const r = await users.removeAccount(existing.id); console.log("removed:", r.removed, "orgs deleted:", r.deletedOrgIds.length); }
   } else {
     if (existing) throw new Error("tmp-operator already exists; remove it first");
-    if (!process.env.PW || process.env.PW.length < 16) throw new Error("PW missing or too short");
+    if (!process.env.PW || process.env.PW.length < 24) throw new Error("PW missing or shorter than 24 characters");
     const u = await users.create({ username: USER, password: process.env.PW, role: "operator" });
     console.log("created operator id", u.id, "default org", u.default_org_id);
   }
