@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://relay.relaynet.network https://jonathanberi.us.auth0.com; img-src 'self' data: https:; frame-src https://jonathanberi.us.auth0.com; form-action 'self' https://jonathanberi.us.auth0.com; base-uri 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://relay.relaynet.network https://jonathanberi.us.auth0.com; img-src 'self' data:; form-action 'self' https://jonathanberi.us.auth0.com; base-uri 'self'; frame-ancestors 'none'; object-src 'none'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
