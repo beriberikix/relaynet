@@ -36,12 +36,34 @@ kill_timeout = 15
   # 40 KB/s for a user 250 ms away); 64 KiB with slow start is ~5x faster.
   TCP_WINDOW_SIZE = "65535"
 
-  # No anonymous tier: every session needs an account (invite-only beta).
-  ANON_ENABLED = "false"
+  # Anonymous tokens for the demos (docs/design/open-front-door.md): the
+  # built-in anon tier (1 session, 15 min, ports 80/443, 200 MB a day per
+  # address), at the rate below. ANON_TOKEN_SECRET is a Fly secret.
+  ANON_ENABLED = "true"
 
-  # New Auth0 sign-ups start pending until they redeem an invite code
-  # (created in the operator panel under Invites).
-  SIGNUP_MODE = "invite"
+  # Open sign-up: new Auth0 accounts are active at once, on the free tier
+  # below. Invited accounts keep the user tier.
+  SIGNUP_MODE = "open"
+  JWT_DEFAULT_TIER = "free"
+
+  # Free tier, every field set so nothing is inherited from user:
+  # 1 session, 30 min (5 min idle), TCP 80/443 and UDP 443, 32 TCP
+  # connections at 5 new per second, 1 GiB a month. Free and anon are both
+  # capped at 128 KiB/s each way: the B1 load test (2026-10-30) found
+  # shared-cpu-1x throttles to ~6% of a CPU after its burst, about 1.4 MiB/s
+  # relayed in total, so lower per-visitor rates share it among more people.
+  TIERS_JSON = '{"anon":{"uploadBps":131072,"downloadBps":131072},"free":{"uploadBps":131072,"downloadBps":131072,"maxTcpConnections":32,"synPerSec":5,"dnsQps":20,"maxUdpFlows":32,"connectTimeoutMs":10000,"allowedTcpPorts":[80,443],"allowedUdpPorts":[443],"dnsServers":["8.8.8.8"],"vmToVm":false,"maxSessionMs":1800000,"idleMs":300000,"maxSessionsPerOwner":1,"maxSessionsPerIP":2,"quotaBytes":1073741824,"quotaPeriod":"month"}}'
+
+  # Monthly egress budget, all tiers' bytes counted; only free and anon are
+  # slowed (to BUDGET_THROTTLE_BPS, default 64 KiB/s) then closed and refused
+  # until the next UTC month. From the cost ceiling: fixed costs ~$8 a month
+  # (October 2026 invoice), egress at a blended $0.04/GB (Fly bills per
+  # edge region). Throttle at ($20 - $8) / $0.04 = 300 GB; pause at
+  # ($50 - $8) / $0.04 x 0.8 = 840 GB. Recompute if the Cost Explorer shows a
+  # different blended rate.
+  BUDGET_TIERS = "free,anon"
+  BUDGET_THROTTLE_BYTES = "300000000000"  # 300 GB
+  BUDGET_PAUSE_BYTES = "840000000000"  # 840 GB
 
   # The operator panel is public at https://admin.relaynet.network: the
   # public listener hands requests for that name to the admin app (relay
@@ -85,10 +107,12 @@ kill_timeout = 15
   min_machines_running = 1
 
   [http_service.concurrency]
-    # The 10.0.2.0/24 pool holds 240 sessions; leave headroom for health checks.
+    # The 10.0.2.0/24 pool holds 240 sessions. Above it, the relay itself must
+    # still answer token requests ("relay-full") and refuse upgrades with a
+    # readable 1013, so Fly's proxy limit sits well above the pool.
     type = "connections"
-    soft_limit = 200
-    hard_limit = 260
+    soft_limit = 260
+    hard_limit = 300
 
   [[http_service.checks]]
     interval = "15s"

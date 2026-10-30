@@ -50,9 +50,10 @@ kill_timeout = 15
   JWT_DEFAULT_TIER = "free"
 
   # Free tier, every field set so nothing is inherited from user:
-  # 1 session, 30 min (5 min idle), 256 KiB/s each way, TCP 80/443 and UDP 443,
-  # 32 TCP connections at 5 new per second, 1 GiB a month.
-  TIERS_JSON = '{"free":{"uploadBps":262144,"downloadBps":262144,"maxTcpConnections":32,"synPerSec":5,"dnsQps":20,"maxUdpFlows":32,"connectTimeoutMs":10000,"allowedTcpPorts":[80,443],"allowedUdpPorts":[443],"dnsServers":["8.8.8.8"],"vmToVm":false,"maxSessionMs":1800000,"idleMs":300000,"maxSessionsPerOwner":1,"maxSessionsPerIP":2,"quotaBytes":1073741824,"quotaPeriod":"month"}}'
+  # 1 session, 30 min (5 min idle), TCP 80/443 and UDP 443, 32 TCP
+  # connections at 5 new per second, 1 GiB a month. Free and anon at
+  # 128 KiB/s each way, as in production (see fly.toml).
+  TIERS_JSON = '{"anon":{"uploadBps":131072,"downloadBps":131072},"free":{"uploadBps":131072,"downloadBps":131072,"maxTcpConnections":32,"synPerSec":5,"dnsQps":20,"maxUdpFlows":32,"connectTimeoutMs":10000,"allowedTcpPorts":[80,443],"allowedUdpPorts":[443],"dnsServers":["8.8.8.8"],"vmToVm":false,"maxSessionMs":1800000,"idleMs":300000,"maxSessionsPerOwner":1,"maxSessionsPerIP":2,"quotaBytes":1073741824,"quotaPeriod":"month"}}'
 
   # Monthly egress budget, all tiers' bytes counted; only free and anon are
   # slowed (to BUDGET_THROTTLE_BPS, default 64 KiB/s) then closed and refused
