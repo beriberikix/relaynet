@@ -309,7 +309,7 @@
     $("#signin").hidden = true;
     showView(true);
     await loadDashboard();
-    offerInvite();
+    offerInviteIfActive();
   }
 
   async function relayAuth(path, body) {
@@ -381,13 +381,13 @@
   }
 
   // --- Relay API -----------------------------------------------------------
-  async function api(path, { method = "GET", body = null } = {}) {
+  async function api(path, { method: verb = "GET", body = null } = {}) {
     const token = await accessToken();
     const headers = { Authorization: `Bearer ${token}` };
     if (currentOrgId !== null && orgScoped(path)) headers["X-Relay-Org"] = String(currentOrgId);
     if (body !== null) headers["Content-Type"] = "application/json";
     const res = await fetch(relayBase + path, {
-      method,
+      method: verb,
       headers,
       body: body === null ? undefined : JSON.stringify(body),
     });
@@ -681,6 +681,16 @@
   // else sent must not move the account into an organization by itself.
   function offerInvite() {
     $("#card-join").hidden = !hasInvite();
+  }
+
+  // A pending account keeps the invitation for after activation instead of
+  // spending it on a refusal; the redeem form and a reload both pick it up.
+  function offerInviteIfActive() {
+    if (me.user.status !== "pending") {
+      offerInvite();
+    } else if (hasInvite()) {
+      showStatus("You have been invited to an organization, but your account isn't active yet. Enter a beta invite code below, or ask the operator to activate your account and reload this page. The invitation is kept for you.", false, true);
+    }
   }
 
   async function acceptInvite(token) {
@@ -985,14 +995,6 @@
       return;
     }
     await loadDashboard();
-    if (me.user.status === "pending") {
-      // Keep the invitation for after activation instead of spending it on a
-      // refusal; the redeem form and a reload both pick it up.
-      if (hasInvite()) {
-        showStatus("You have been invited to an organization, but your account isn't active yet. Enter a beta invite code below, or ask the operator to activate your account and reload this page. The invitation is kept for you.", false, true);
-      }
-      return;
-    }
-    offerInvite();
+    offerInviteIfActive();
   })();
 })();
