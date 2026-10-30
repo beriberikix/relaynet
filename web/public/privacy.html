@@ -14,15 +14,17 @@
   </header>
   <main class="legal">
 <h1>relaynet Privacy Policy</h1>
-<p><em>Effective October 14, 2026.</em></p>
+<p><em>Effective October 30, 2026.</em></p>
 <p>This policy explains what relaynet, operated by Jonathan Beri, collects and why. Contact: <a href="mailto:privacy@relaynet.network">privacy@relaynet.network</a>.</p>
 <h2>What is collected</h2>
 <ul><li><strong>Account</strong>: your email address and an identifier from the sign-in provider (Auth0), when the account was created and last used, your tier and status.</li><li><strong>API tokens</strong>: a one-way hash and short prefix of each token, its name, creation, last-use and expiry times. The token itself is never stored.</li><li><strong>Usage</strong>: bytes sent and received and number of sessions, per month.</li><li><strong>Connection records</strong>: for each connection your sessions open, the destination address and port, protocol, whether it was allowed, bytes transferred and start and end time. These are kept for <strong>30 days</strong> to investigate abuse reports, then deleted.</li><li><strong>Network data</strong>: your IP address while a session is open, and in operational logs used to run and secure the service (kept 14 days).</li></ul>
+<h2>Anonymous use</h2>
+<p>Demo pages can use relaynet without an account. No account data is collected. IP addresses are processed for anonymous rate limits: each anonymous token works only from the address (or IPv6 /64) that requested it, and per-address session and daily data limits are counted in the relay's memory, not stored. IP addresses appear in operational logs kept for 14 days. Connection records for anonymous sessions are kept for 30 days, like any other, under a random session identifier rather than an account.</p>
 <p>relaynet does not record or inspect the contents of your traffic, and cannot read encrypted (TLS) traffic.</p>
 <h2>Why</h2>
-<p>To provide and secure the service, enforce limits and the Acceptable Use Policy, answer abuse reports, and contact you about your account. Nothing is sold, and nothing is used for advertising.</p>
+<p>To provide and secure the service, enforce limits (including anonymous rate limits and the free tiers' monthly budget) and the Acceptable Use Policy, answer abuse reports, and contact you about your account. Nothing is sold, and nothing is used for advertising.</p>
 <h2>Legal bases</h2>
-<p>Where data-protection law such as the GDPR applies: account, token and usage data are processed to provide the service you signed up for (contract); connection records and network data are processed to keep the service and the internet safe from abuse and to answer abuse reports (legitimate interests); emails about your account are part of the service.</p>
+<p>Where data-protection law such as the GDPR applies: account, token and usage data are processed to provide the service you signed up for (contract); connection records and network data, including the IP addresses of anonymous users, are processed to keep the service and the internet safe from abuse and to answer abuse reports (legitimate interests); emails about your account are part of the service.</p>
 <h2>Cookies and tracking</h2>
 <p>The dashboard stores your sign-in session in your browser (Auth0) and sets no advertising or analytics cookies. There are no third-party trackers.</p>
 <h2>Security</h2>

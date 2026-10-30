@@ -229,6 +229,25 @@
     return null;
   }
 
+  // The relay's monthly budget for the free and demo tiers. When it is
+  // paused, say so before anyone signs in or opens a demo.
+  function showBudget() {
+    const banner = $("#budget-banner");
+    if (authConfig.budget !== "paused") {
+      banner.hidden = true;
+      return;
+    }
+    let until = "";
+    if (authConfig.pausedUntil) {
+      const date = new Date(`${authConfig.pausedUntil}T00:00:00Z`);
+      until = Number.isNaN(date.getTime())
+        ? ""
+        : ` until ${date.toLocaleDateString(undefined, { dateStyle: "long", timeZone: "UTC" })}`;
+    }
+    banner.textContent = `The free tier is paused${until}. The demos and free accounts resume then; beta accounts are not affected.`;
+    banner.hidden = false;
+  }
+
   async function initAuth() {
     // Tokens cached by the Auth0 SDK this page used before: not used any more.
     try {
@@ -242,6 +261,7 @@
     } catch (_error) {
       // relay unreachable: OIDC sign-in still works; data calls will say so
     }
+    showBudget();
 
     if (cfg.oidc && window.oidc && window.oidc.UserManager) {
       oidcManager = new oidc.UserManager({

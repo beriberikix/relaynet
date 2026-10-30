@@ -27,6 +27,7 @@
 
   <main>
     <section id="status" class="status" hidden></section>
+    <p id="budget-banner" class="banner" role="status" hidden></p>
 
     <!-- Sign-in with a relay account (shown when the relay offers passwords) -->
     <section id="signin" class="card signin" hidden>
@@ -53,14 +54,22 @@
           Browsers can speak HTTP, WebSocket and WebRTC, but not plain TCP or UDP. relaynet carries
           Ethernet frames over a WebSocket, so code in a page that has its own TCP/IP stack
           (a virtual machine, an emulator, or a user-space stack compiled to WebAssembly)
-          gets DHCP, DNS, TCP and UDP to the public internet. Your sessions also share a private
-          network, so a browser tab can reach a machine you run elsewhere.
+          gets DHCP, DNS, TCP and UDP to the public internet. A beta account's sessions also share a
+          private network, so a browser tab can reach a machine you run elsewhere.
         </p>
-        <p class="muted" data-hosted hidden>relaynet is in an invite-only beta. Sign in, then redeem your invite code. By signing in you agree to the <a href="terms.html">Terms</a> and <a href="acceptable-use.html">Acceptable Use Policy</a>.</p>
+        <p class="muted" data-hosted hidden>relaynet is free to try. The demos below need no account; sign in to create API tokens for your own pages. By using relaynet you agree to the <a href="terms.html">Terms</a> and <a href="acceptable-use.html">Acceptable Use Policy</a>.</p>
         <p class="muted" data-self-hosted hidden>This is a self-hosted relay. Sign in, or create an account if the operator allows it.</p>
         <div class="hero-actions">
           <button class="btn btn-primary btn-lg" type="button" data-action="login">Sign in</button>
           <a class="btn btn-lg" href="#uses">See what it is for</a>
+        </div>
+        <div class="demos" data-hosted hidden>
+          <h2>Boot Zephyr in your browser</h2>
+          <p class="muted">No sign-in. Each demo asks the relay for a short-lived anonymous token and puts the guest on the internet.</p>
+          <ul class="plain">
+            <li><a href="https://beriberikix.github.io/zephyr-v86/" rel="noopener">zephyr-v86</a>: Zephyr on an x86 PC emulator (v86). It gets a DHCP lease, then runs <code>wget</code>.</li>
+            <li><a href="https://beriberikix.github.io/zephyr-wasm-soc/" rel="noopener">zephyr-wasm-soc</a>: Zephyr compiled to WebAssembly. Pick "Real network (relaynet)", then Run.</li>
+          </ul>
         </div>
       </div>
 
@@ -153,9 +162,25 @@
           entry. Non-browser clients may send <code>Authorization: Bearer</code> instead.</p>
       </div>
 
-      <div id="tiers" class="grid" data-hosted hidden>
+      <div id="tiers" class="grid three" data-hosted hidden>
         <div class="card">
-          <h3>Beta account</h3>
+          <h3>Demo (no account)</h3>
+          <ul class="plain">
+            <li>Anonymous 15-minute tokens, one session each</li>
+            <li>TCP 80 and 443, UDP 443, 128 KiB/s each direction</li>
+            <li>15 minute sessions, 200 MiB per address per day</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Free account</h3>
+          <ul class="plain">
+            <li>Sign in, then create long-lived API tokens; one session at a time</li>
+            <li>TCP 80 and 443, UDP 443, 128 KiB/s each direction</li>
+            <li>30 minute sessions, 1 GiB per month</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Beta account (invite)</h3>
           <ul class="plain">
             <li>Long-lived API tokens, up to 4 concurrent sessions</li>
             <li>Any port except mail, 1 MiB/s each direction</li>
@@ -163,6 +188,9 @@
           </ul>
         </div>
       </div>
+      <p class="muted" data-hosted hidden>The demo and free tiers share a monthly bandwidth budget. When it runs low,
+        new demo and free sessions are slowed; when it runs out, they pause until the first day of the next month
+        (UTC). Beta accounts are not affected. See <a href="docs.html#limits">Limits</a>.</p>
     </section>
 
     <!-- Dashboard -->
@@ -180,7 +208,7 @@
 
       <div class="card" id="card-invite" hidden>
         <h3>Redeem your invite</h3>
-        <p>This relay is invite-only. Enter the code you were sent to activate your account.</p>
+        <p>This account is waiting for activation. Enter the invite code you were sent.</p>
         <form id="invite-form" class="inline-form">
           <label>Invite code <input name="code" type="text" maxlength="32" placeholder="RLY-XXXX-XXXX-XXXX"
             autocomplete="off" spellcheck="false" required></label>

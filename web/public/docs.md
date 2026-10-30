@@ -5,7 +5,7 @@ raw IPv4 networking. The client sends Ethernet frames over a WebSocket; the
 relay answers DHCP and ARP, forwards TCP and UDP to the public internet, and
 sends the replies back as Ethernet frames. The client brings its own TCP/IP
 stack: a virtual machine (v86, Linux or Zephyr compiled to WebAssembly), or a
-user-space stack. Sessions of one account also share a private network.
+user-space stack. Sessions of one beta account also share a private network.
 
 This page is also available as plain Markdown at
 [/docs.md](https://relaynet.network/docs.md), and an index for AI agents is at
@@ -20,7 +20,7 @@ This page is also available as plain Markdown at
 | Authentication | API token in a second subprotocol entry, `relay.token.<token>`, or `Authorization: Bearer <token>` outside browsers |
 | Message format | Each binary WebSocket message is exactly one Ethernet II frame, without preamble or checksum (FCS) |
 | Network | IPv4 only: `10.0.2.0/24`, gateway `10.0.2.2`, addresses from DHCP |
-| Access | Invite-only beta; sign in at [relaynet.network](https://relaynet.network) and redeem an invite |
+| Access | Free: sign in at [relaynet.network](https://relaynet.network) and create an API token, or request an [anonymous token](#anonymous-tokens) for a demo |
 
 ## What it is for
 
@@ -81,8 +81,9 @@ Every client needs something that turns sockets into Ethernet frames:
 
 ### Joining your own machines
 
-All sessions of one account share `10.0.2.0/24` and can reach each other by
-address, while other accounts' sessions are invisible. To put a regular
+All sessions of one beta (`user` tier) account share `10.0.2.0/24` and can
+reach each other by address, while other accounts' sessions are invisible.
+Free and anonymous sessions are kept apart from each other. To put a regular
 computer on that network, run
 [relaynet-bridge](https://github.com/beriberikix/relaynet-bridge) on it. It
 connects out to the relay with your token, so no inbound port is opened.
@@ -109,8 +110,8 @@ bridged by your own program.
 
 ## Quick start
 
-1. Sign in at [relaynet.network](https://relaynet.network) and redeem your
-   invite code.
+1. Sign in at [relaynet.network](https://relaynet.network). New accounts are
+   on the free tier; no invite is needed.
 2. In the dashboard, under **API tokens**, create a token. It looks like
    `rr_<prefix>_<secret>` and is shown once; copy it.
 3. Open a WebSocket with the token and connect it to your VM's network card
@@ -316,6 +317,38 @@ emulator.add_listener("net0-send", (frame) => relay.send(frame));
 curl -s -H "Authorization: Bearer $RELAY_TOKEN" https://relay.relaynet.network/api/me
 ```
 
+### Anonymous tokens
+
+A public demo page cannot hold an API token, so it can ask the relay for an
+anonymous one instead, with no sign-in:
+
+```js
+const res = await fetch("https://relay.relaynet.network/api/anon/token", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: "{}",
+});
+if (!res.ok) {
+  const { error, pausedUntil } = await res.json(); // see the table below
+  throw new Error(error);
+}
+const { token } = await res.json();
+const ws = new WebSocket("wss://relay.relaynet.network/", ["relay.v1", "relay.token." + token]);
+```
+
+- An anonymous token is valid for 15 minutes, opens one session, and works
+  only from the IP address that requested it (the same /64 for IPv6).
+- Anonymous sessions use the `anon` tier under [Limits](#limits): web ports
+  only and a low rate, enough to boot a guest, get a lease and fetch a page.
+- The page's origin must be allowed by the relay. For relaynet.network, write
+  to support to have a demo origin added.
+
+| Status | `error` | Meaning |
+|---|---|---|
+| 429 | `anon-token-rate-limited` | Too many tokens from this address; wait a minute. |
+| 503 | `free-tier-paused` | The monthly budget is used up; `pausedUntil` is the date it resumes. |
+| 503 | `relay-full` | Every address is in use; try again in a few minutes. |
+
 ## Protocol
 
 relaynet speaks the rootlessRelay WebSocket protocol, version `relay.v1`.
@@ -437,10 +470,10 @@ address for the session, if no other session holds it.
 
 ### Errors
 
-Before the handshake completes, the relay answers with an HTTP status and a
-JSON `error`. Browsers hide these and report a failed connection (close code
-`1006`); use the `curl` check under [API tokens](#api-tokens), or a non-browser
-client, to see the reason.
+If the token is missing or not accepted, the relay refuses the handshake with
+an HTTP status and a JSON `error`. Browsers hide these and report a failed
+connection (close code `1006`); use the `curl` check under
+[API tokens](#api-tokens), or a non-browser client, to see the reason.
 
 | Status | `error` | Meaning |
 |---|---|---|
@@ -449,10 +482,12 @@ client, to see the reason.
 | 401 | `token-revoked`, `token-expired` | Create a new token. |
 | 403 | `account-pending` | The account has not redeemed an invite. |
 | 403 | `account-suspended` | The account is suspended; contact support. |
-| 429 | `session limit reached for this account` | Close another session first. |
-| 429 | `connection limit reached for this address` | Too many sessions from one client IP. |
-| 429 | `quota exceeded` | Monthly data quota used up. |
-| 503 | `address pool exhausted`, `server shutting down` | The relay is full or restarting; retry with backoff. |
+| 503 | `server shutting down` | The relay is restarting; retry with backoff. |
+
+When the token is valid but the session cannot start (a limit, the budget, or
+a full relay), a client that offers `relay.v1` gets the handshake and then an
+immediate close with one of the codes below, so a browser page can show the
+reason. Other clients get the HTTP status shown in brackets.
 
 After the handshake, the relay closes sessions with these codes:
 
@@ -462,8 +497,16 @@ After the handshake, the relay closes sessions with these codes:
 | 1001 | `server shutting down` | The relay is restarting (deploys). Reconnect after a few seconds. |
 | 1008 | `token revoked` | The token was revoked. |
 | 1008 | `account suspended`, `account deleted` | The account can no longer connect. |
-| 1008 | `quota exceeded` | The monthly quota ran out during the session. |
+| 1006 | (none) | The network failed, or the handshake was refused before the upgrade (see the HTTP table above). |
+| 1008 | `quota exceeded` (429) | The tier's data quota is used up, at the start or during the session. |
+| 1008 | `free tier paused until <date>` (503) | The monthly budget for the free and anonymous tiers is used up. Do not retry before the date. |
 | 1008 | `terminated by operator` | Closed by the relaynet operator. |
+| 1013 | `session limit reached for this account` (429) | Close another session first. |
+| 1013 | `connection limit reached for this address` (429) | Too many sessions from one client address (one /64 for IPv6). |
+| 1013 | `relay full` (503) | Every address is in use. Try again in a few minutes. |
+
+`1008` means policy: do not retry automatically. `1013` means try again
+later: retry after a delay, or offer the user a Reconnect button.
 
 Reconnect with exponential backoff (for example 1, 2, 4 … 60 seconds), and do
 not retry on 401 or 403 or after `1008`. The [client
@@ -514,24 +557,49 @@ ws.onmessage = ({ data }) => {
 
 ## Limits
 
-Beta accounts have these limits. They are per account unless noted.
+relaynet.network has three tiers. New accounts are on `free`; anonymous
+tokens use `anon`; `user` (beta) accounts are set up by the operator. Limits
+are per account unless noted.
 
-| Limit | Value |
-|---|---|
-| Concurrent sessions | 4 per account, 4 per client IP address |
-| Bandwidth | 1 MiB/s download and 1 MiB/s upload, per session |
-| Data quota | 20 GiB per calendar month (UTC), both directions combined; traffic between your own VMs counts once |
-| Open TCP connections | 256 per session |
-| New TCP connections | 50 per second per account, all sessions together |
-| UDP flows | 256 per session |
-| DNS queries | 100 per second per account, all sessions together |
-| Session length | 12 hours; 30 minutes idle |
-| Blocked ports | 25; UDP reflector services (see [Outbound rules](#outbound-rules)) |
+| Limit | `anon` (no account) | `free` | `user` (beta) |
+|---|---|---|---|
+| Concurrent sessions | 1 per token, 2 per client address | 1 per account, 2 per client address | 4 per account, 4 per client address |
+| Bandwidth, each direction | 128 KiB/s | 128 KiB/s | 1 MiB/s |
+| Data quota | 200 MiB per client address per day | 1 GiB per month | 20 GiB per month |
+| Ports | TCP 80 and 443, UDP 443 | TCP 80 and 443, UDP 443 | Any except those under [Outbound rules](#outbound-rules) |
+| Session length | 15 minutes; 3 minutes idle | 30 minutes; 5 minutes idle | 12 hours; 30 minutes idle |
+| Open TCP connections, per session | 32 | 32 | 256 |
+| New TCP connections, per second | 10 | 5 | 50 |
+| UDP flows, per session | 32 | 32 | 256 |
+| DNS queries, per second | 20 | 20 | 100 |
+| Private network between your sessions | No | No | Yes |
+
+Monthly quotas run by calendar month (UTC) and count both directions; traffic
+between your own VMs counts once. Port 25 and UDP reflector services are
+blocked on every tier (see [Outbound rules](#outbound-rules)).
 
 Traffic over a limit is slowed down or dropped rather than causing an error:
 TCP slows down, excess SYNs and UDP packets are dropped, and the VM's own
 retransmissions recover. Use `GET /api/me` to see your limits and
 `GET /api/me/usage` to see this month's usage.
+
+### The monthly budget
+
+The `anon` and `free` tiers share one monthly bandwidth budget, which keeps
+the free service within what it costs to run. All traffic through the relay
+counts toward it.
+
+- **Throttled:** past the first threshold, new `anon` and `free` sessions
+  start at a lower rate (64 KiB/s each direction). Sessions already open keep theirs.
+- **Paused:** past the second threshold, open `anon` and `free` sessions
+  close with `1008 free tier paused until <date>`, and new ones are refused.
+  The landing page shows a banner.
+- **Reset:** the budget resets on the first day of each month (UTC).
+- `user` sessions are never slowed or closed by the budget.
+
+`GET https://relay.relaynet.network/api/auth/config` reports the state, with no
+token: `"budget"` is `"open"`, `"throttled"` or `"paused"`, and `"pausedUntil"`
+is a date or `null`.
 
 ## Account API
 
@@ -608,3 +676,10 @@ and returns JSON. Everything is scoped to your own account.
 
 relaynet runs [rootlessRelay](https://github.com/obegron/rootlessRelay), an
 open-source user-space network relay, in its hosted mode.
+
+## Self-hosting
+
+To run your own relay, with no budget or tiers you did not choose, follow the
+[self-hosting guides](https://github.com/beriberikix/relaynet/tree/main/docs/self-hosting):
+a quick start, a single server, OpenID Connect sign-in, and how
+relaynet.network itself is deployed.

@@ -1,10 +1,11 @@
 # relaynet Acceptable Use Policy
 
-_Effective October 14, 2026._
+_Effective October 30, 2026._
 
 relaynet gives browser virtual machines and other clients a path to the
 internet through shared addresses. This policy keeps those addresses usable for everyone. It applies
-to all traffic sent through your account or its tokens.
+to all traffic sent through your account or its tokens, and to anonymous use
+without an account (for example through a demo page).
 
 ## Not allowed
 
@@ -31,7 +32,8 @@ to all traffic sent through your account or its tokens.
 I review abuse reports and the connection records described in the Privacy
 Policy. Depending on severity I may warn you, close sessions, suspend or
 delete the account, and report illegal activity to the authorities. Serious
-or repeated violations lead to immediate deletion.
+or repeated violations lead to immediate deletion. Anonymous sessions that break this policy
+are closed, and anonymous access may be limited or turned off for everyone.
 
 ## Reporting abuse
 
