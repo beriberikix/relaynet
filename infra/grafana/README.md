@@ -11,9 +11,11 @@ after editing either file.
 ## Interface
 
 - `provision.py` (run as a script; standard library only):
-  - Environment: `GRAFANA_URL`, `GRAFANA_SA_TOKEN`, `ALERT_EMAIL` (all
-    required; read at import, so a missing one raises `KeyError`). Usually
-    sourced from `infra/.env.local`.
+  - Environment: `GRAFANA_URL`, `GRAFANA_SA_TOKEN`, `ALERT_EMAIL`,
+    `NTFY_URL` and `NTFY_TOKEN` (all required; read at import, so a missing
+    one raises `KeyError`). Usually sourced from `infra/.env.local`.
+    `NTFY_URL` is the private ntfy topic with `?template=grafana`, and
+    `NTFY_TOKEN` an ntfy access token that may only publish to it.
   - Constants: `DS = "fly-relaynet"` (Prometheus data source uid),
     `FOLDER_UID = "relaynet"`.
   - `RULES`: list of `(name, PromQL, comparison, threshold, pending, severity,
@@ -21,7 +23,10 @@ after editing either file.
     near capacity, memory pressure, CPU burst balance, CPU throttling, relay
     5xx, authentication-failure spike, egress-denial spike, high egress volume
     and the Litestream backup rules (upload errors, sync errors, disk full,
-    metrics missing, no upload in 26 h).
+    metrics missing, no upload in 26 h), and the egress budget on
+    production: 50%, 80% and 100% of the pause threshold
+    (`BUDGET_RATIO`), any change of `rootlessrelay_budget_state`, and an
+    operator override (`rootlessrelay_budget_forced`).
   - `UNEXPECTED_RESTART`: a three-query rule (Prometheus restart count, Loki
     count of clean `shutting down` logs with code 0, math `$A > 0 && $B == 0`)
     that fires only on restarts with no clean shutdown.
@@ -54,9 +59,12 @@ after editing either file.
 ## Side Effects
 
 - Network writes to the Grafana Cloud API at `GRAFANA_URL`: creates folder
-  `relaynet` (409/412 accepted), upserts contact point `relaynet-email`,
-  overwrites the notification policy's receiver and timing (`group_wait` 30s,
-  `group_interval` 5m, `repeat_interval` 4h), upserts every alert rule, and
+  `relaynet` (409/412 accepted), upserts contact points `relaynet-email` and
+  `relaynet-push` (a webhook to `NTFY_URL` with `Authorization: Bearer
+  NTFY_TOKEN`), overwrites the notification policy's receiver and timing
+  (`group_wait` 30s, `group_interval` 5m, `repeat_interval` 4h), replaces its
+  `relaynet push` child routes with two (`alertname=~"budget.*"` and
+  `severity="critical"`, both `continue: true`, so email still gets them), upserts every alert rule, and
   posts the dashboard with `overwrite: True`.
 - Reads `relay-dashboard.json` from disk.
 
