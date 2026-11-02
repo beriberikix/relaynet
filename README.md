@@ -22,11 +22,26 @@ single sign-on with any OpenID Connect provider, S3 backups. The guides are
 in [`docs/self-hosting/`](docs/self-hosting/): quick start, single server,
 single sign-on, and how relaynet.network itself is deployed.
 
-## This repository
+## This repository and rootlessRelay
 
-The relay process is
-[rootlessRelay](https://github.com/beriberikix/rootlessRelay) in hosted mode,
-pinned as a dependency; this repo holds everything around it.
+relaynet is three layers in two places:
+
+1. **Upstream engine:** [obegron/rootlessRelay](https://github.com/obegron/rootlessRelay)
+   (MIT), a user-space TCP/IP relay for browser VMs.
+2. **The fork:** [beriberikix/rootlessRelay](https://github.com/beriberikix/rootlessRelay)
+   (MIT). It adds hosted mode: accounts, orgs, tokens, tiers, quotas,
+   metering, the audit log, OIDC and the operator panel. All relay code is
+   here, and so are its tests and releases. Fixes to the engine go upstream
+   where they apply (upstream merged its TCP slow start from the fork), and
+   the fork pulls upstream releases. Hosted mode stays in the fork.
+3. **This repository** (Apache-2.0). It pins a fork release tarball in
+   `relay/package.json` and holds everything around it: the site and
+   dashboard, the client library, the container images, compose
+   self-hosting, deployment and operations tooling, and docs.
+
+Send relay behaviour changes to the fork and everything else here
+(`CONTRIBUTING.md`). Issues for work that lands in the fork are tracked in
+this repository with the `repo:fork` label.
 
 ```
 compose.yaml  quick start: the relay and the site on one machine
@@ -41,6 +56,11 @@ docs/    self-hosting guides, design notes, security audit and threat model
 
 Bump the relay by changing the tarball version in `relay/package.json` and
 running `npm install` there to refresh the lockfile.
+
+Pushes to `main` that change either image publish them to GitHub's container
+registry, with build-provenance attestations (`publish-images.yml`):
+`ghcr.io/beriberikix/relaynet-relay` (tagged with the rootlessRelay version)
+and `ghcr.io/beriberikix/relaynet-web`.
 
 ## System Overview
 
@@ -115,7 +135,8 @@ probes, a load generator, Grafana provisioning, and the legal-page generator.
 - Outbound internet egress (IPv4 TCP/UDP) on behalf of relay sessions. The
   probes and load generator cause real DNS and HTTP egress through it.
 - Deploys from GitHub Actions: Fly.io (relay, staging first; log shipper),
-  Cloudflare Workers (site, probe worker), npm (`client/`).
+  Cloudflare Workers (site, probe worker), npm (`client/`), GHCR
+  (`relaynet-relay` and `relaynet-web` images).
   `relay-rollback.yml` redeploys an earlier relay image by hand; schema
   migrations are not undone.
 - Production data read by GitHub Actions: `backup-restore-check.yml` (weekly)

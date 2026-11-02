@@ -1,0 +1,100 @@
+name: publish images
+
+# Publishes the two compose images to GitHub's container registry, with
+# build-provenance attestations (docs/design/self-hosting.md, "Images"):
+#
+# - ghcr.io/beriberikix/relaynet-relay (relay/), tagged with the pinned
+#   rootlessRelay version, the commit and latest.
+# - ghcr.io/beriberikix/relaynet-web (deploy/caddy/Dockerfile), tagged with
+#   the commit and latest.
+#
+# Runs on pushes to main that change either image, and by hand. linux/amd64
+# only: relay/Dockerfile downloads the x86_64 Litestream binary.
+# Verify an image with:
+#   gh attestation verify oci://ghcr.io/beriberikix/relaynet-relay:latest -R beriberikix/relaynet
+on:
+  push:
+    branches: [main]
+    paths:
+      - "relay/Dockerfile"
+      - "relay/package.json"
+      - "relay/package-lock.json"
+      - "relay/entrypoint.sh"
+      - "relay/litestream.yml"
+      - "deploy/caddy/**"
+      - "web/public/**"
+      - "web/package.json"
+      - "web/package-lock.json"
+      - ".github/workflows/publish-images.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-images
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: relaynet-relay
+            context: relay
+            dockerfile: relay/Dockerfile
+          - image: relaynet-web
+            context: .
+            dockerfile: deploy/caddy/Dockerfile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: rootlessRelay version
+        id: relay
+        if: matrix.image == 'relaynet-relay'
+        run: |
+          v=$(jq -r '.dependencies.rootlessrelay | capture("/download/v(?<v>[^/]+)/").v' relay/package.json)
+          test -n "$v" && test "$v" != null
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          tags: |
+            type=raw,value=${{ steps.relay.outputs.version }},enable=${{ steps.relay.outputs.version != '' }}
+            type=sha
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.licenses=Apache-2.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        id: push
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      - name: Summary
+        run: |
+          echo "### ${{ matrix.image }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '${{ steps.meta.outputs.tags }}' | sed 's/^/- `/; s/$/`/' >> "$GITHUB_STEP_SUMMARY"
+          echo "- digest \`${{ steps.push.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
