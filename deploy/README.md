@@ -4,7 +4,9 @@
 
 Self-hosting deployment assets for the `docker compose` quick start defined
 in the repository's [`compose.yaml`](../compose.yaml). The `web` service's
-image is built from `caddy/`. `compose-check.sh` is the end-to-end smoke test
+image is built from `caddy/`. Compose pulls both images from GHCR
+(`publish-images.yml` publishes them) and builds them from source with
+`--build`. `compose-check.sh` is the end-to-end smoke test
 that CI runs against a running stack.
 
 ## Interface

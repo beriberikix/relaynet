@@ -100,8 +100,15 @@ docker compose start relay
 
 ```sh
 git pull
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
+
+`latest` is the newest build of `main`. To stay on a known version, set
+`RELAYNET_IMAGE_TAG=sha-<commit>` in `.env` (the tags are listed on each
+package's GitHub page). If you changed the code, use
+`docker compose up -d --build` instead of `pull`, which builds from your
+checkout.
 
 Database migrations run when the relay starts. Read the release notes first,
 and take a backup (above) before an upgrade that mentions a schema change.
