@@ -10,7 +10,9 @@ cd relaynet
 docker compose up
 ```
 
-The first start builds two images, which takes a minute or two. When the
+The first start downloads two images from GitHub's container registry
+(`ghcr.io/beriberikix/relaynet-relay` and `relaynet-web`). To build them from
+your checkout instead, run `docker compose up --build`. When the
 log shows the relay as healthy, open **http://localhost**.
 
 ## Sign in

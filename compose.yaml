@@ -7,6 +7,10 @@
 # account from the sign-in panel. The operator panel is on
 # http://127.0.0.1:8001, reachable only from this machine.
 #
+# The images come from GitHub's container registry: RELAYNET_IMAGE_TAG
+# picks the tag (latest is the newest build of main; sha-<commit> pins one).
+# `docker compose up --build` builds them from this checkout instead.
+#
 # Nothing needs configuring for that. For a server with a domain, HTTPS,
 # backups or single sign-on, set the variables below in a .env file next to
 # this one (see docs/self-hosting/).
@@ -15,8 +19,8 @@ name: relaynet
 
 services:
   relay:
+    image: ghcr.io/beriberikix/relaynet-relay:${RELAYNET_IMAGE_TAG:-latest}
     build: relay
-    image: relaynet-relay:local
     restart: unless-stopped
     environment:
       # Accounts: username and password, with sign-up open by default.
@@ -53,7 +57,7 @@ services:
     build:
       context: .
       dockerfile: deploy/caddy/Dockerfile
-    image: relaynet-web:local
+    image: ghcr.io/beriberikix/relaynet-web:${RELAYNET_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       relay:
