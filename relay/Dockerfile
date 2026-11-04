@@ -2,7 +2,7 @@
 # newer, and bookworm has 2.36.
 # Pinned by digest so a rebuild gets the image that was tested; Dependabot
 # bumps tag and digest together.
-FROM node:24-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea
+FROM node:24-trixie-slim@sha256:54f84b4cf8432b21aaffd5d3ce8d41e12cea0d10d33c09d2f3c9879d49d6b446
 
 # Litestream replicates the SQLite database to R2 (see litestream.yml).
 # Pinned and checksum-verified; bump both lines together.
